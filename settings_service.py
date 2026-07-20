@@ -63,11 +63,10 @@ def get_output_root(settings: Dict[str, Any]) -> Path:
     return Path(raw).expanduser() if raw else DEFAULT_OUTPUT_ROOT
 
 
-def playbook_output_dir(settings: Dict[str, Any], case_number: str) -> Path:
-    safe_case = sanitize_folder_name(case_number or "NO_CASE")
-    return get_output_root(settings) / safe_case / "playbooks"
+def playbook_output_dir(settings: Dict[str, Any]) -> Path:
+    return get_output_root(settings) / "playbooks"
 
 
 def sanitize_folder_name(value: str) -> str:
     cleaned = "".join(ch if ch not in '<>:"/\\|?*' else "_" for ch in str(value).strip())
-    return cleaned or "NO_CASE"
+    return cleaned or "playbook"

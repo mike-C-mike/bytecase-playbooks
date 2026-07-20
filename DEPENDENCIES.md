@@ -10,7 +10,7 @@
 
 ## Build dependencies
 
-None in v0.1.0.
+None in v0.2.0.
 
 PyInstaller can be added later for release packaging. PyInstaller is GPL 2.0 with a commercial-use exception. That has been acceptable for the other ByteCase tools when documented.
 

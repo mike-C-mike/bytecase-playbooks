@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.1.0"
+APP_VERSION = "0.2.3"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -300,7 +300,228 @@ PLAYBOOKS = [
             },
         ],
     },
+    {
+        "id": "windows_artifact_review_refresher",
+        "title": "Windows Artifact Review Refresher",
+        "category": "Analysis",
+        "level": "Beginner / Intermediate",
+        "summary": "Use when reviewing a Windows computer image or logical collection and needing a refresher on common artifact areas, what they may help answer, and what they do not prove by themselves.",
+        "use_when": [
+            "A Windows computer image, mounted image, or targeted collection is ready for review.",
+            "You need a structured refresher on common Windows artifact areas.",
+            "You want reminders about documentation language and common overclaims.",
+        ],
+        "avoid_when": [
+            "The task is outside legal authority, scope, training, or agency policy.",
+            "You are being asked to make a conclusion that needs deeper specialist review.",
+            "The source image or collection cannot be documented.",
+        ],
+        "steps": [
+            {
+                "title": "Confirm source image, scope, and working copy",
+                "field_focus": "Start with source context before reviewing artifacts.",
+                "learning_detail": "A Windows artifact review should begin with the acquisition source, image/collection type, case scope, and whether you are working from a protected copy. The artifact review is only as strong as its preservation and documentation foundation.",
+                "why": "Source context prevents the examiner from treating an incomplete targeted collection like a full-disk image, or reviewing artifacts outside the approved question.",
+                "tools": ["ByteCase Acquire", "ByteCase Verify", "Forensic image mounter", "Case request/scope documents"],
+                "artifacts": ["Image/collection source", "Hash manifest", "Mount path", "Scope statement", "Known collection limits"],
+                "cautions": ["Do not assume a targeted collection contains all expected artifacts.", "Do not skip preservation context just because a forensic suite opens the image."],
+                "document": ["Source media/image", "Hash/integrity status", "Collection type", "Scope limits", "Working copy or mount path"],
+            },
+            {
+                "title": "Identify users, profiles, and system context",
+                "field_focus": "Establish which user profiles and system areas are relevant before diving into artifacts.",
+                "learning_detail": "User profiles help frame browser data, downloads, recent files, desktop files, recycle bin content, and application artifacts. System context helps identify OS version, time zone, installed applications, and available logs.",
+                "why": "Most Windows artifacts become more meaningful when tied to a user profile, system timeline, and OS context.",
+                "tools": ["Autopsy", "Magnet AXIOM", "EnCase/FTK-style file browser", "Registry viewer", "Timeline tool"],
+                "artifacts": ["Users folder", "NTUSER.DAT", "SOFTWARE/SYSTEM hives", "Time zone settings", "Installed programs"],
+                "cautions": ["A profile folder does not prove who used the machine at a specific time.", "Time zone and clock issues can affect interpretation."],
+                "document": ["Relevant profiles", "OS/build details", "Time zone/clock notes", "Tool version", "Limitations"],
+            },
+            {
+                "title": "Review common user activity artifacts",
+                "field_focus": "Look for artifacts that help answer what the user or system interacted with.",
+                "learning_detail": "Common user activity areas include LNK files, Jump Lists, RecentDocs, ShellBags, UserAssist, Prefetch, Downloads, Desktop/Documents folders, and Recycle Bin. Each artifact answers a different question and has different limits.",
+                "why": "Reviewing artifacts by question helps avoid turning a pile of parsed output into unsupported conclusions.",
+                "tools": ["LECmd/JLECmd", "RECmd", "PECmd", "Autopsy", "Magnet AXIOM", "Timeline Explorer"],
+                "artifacts": ["LNK files", "Jump Lists", "RecentDocs", "ShellBags", "UserAssist", "Prefetch", "Recycle Bin"],
+                "cautions": ["Existence of a file reference does not always prove the user opened the file.", "Prefetch indicates execution context, not necessarily user intent.", "Parser output should be validated when important."],
+                "document": ["Artifact source path", "Parser/tool version", "Relevant timestamps", "User/profile association", "Interpretation limits"],
+            },
+            {
+                "title": "Review browser, download, and cloud-sync areas",
+                "field_focus": "Review Internet and sync artifacts in context with the case scope.",
+                "learning_detail": "Browser history, cache, downloads, cookies, autofill, bookmarks, extensions, and cloud sync folders can help answer access, download, upload, and account-context questions. Browser artifacts often need careful timestamp and profile interpretation.",
+                "why": "Internet and cloud activity are common in many cases, but they are easy to overstate without context.",
+                "tools": ["Browser History Examiner", "Hindsight", "Autopsy", "Magnet AXIOM", "SQLite viewer"],
+                "artifacts": ["Chrome/Edge/Firefox profiles", "History databases", "Downloads tables", "Cache", "OneDrive/Dropbox/Google Drive folders", "Sync logs"],
+                "cautions": ["Visited URL does not always prove intentional viewing by a specific person.", "Cloud sync folders may contain remote-synced files.", "Private browsing may reduce local artifacts."],
+                "document": ["Browser/profile path", "Artifact type", "Timestamps and time zone", "Account context", "What the artifact does and does not show"],
+            },
+            {
+                "title": "Corroborate and record limitations",
+                "field_focus": "Use multiple artifacts where possible and separate observation from interpretation.",
+                "learning_detail": "A stronger review ties multiple artifacts together: file system metadata, registry artifacts, browser records, logs, thumbnails, or application data. Limitations should be documented clearly when artifacts are missing, incomplete, unsupported, or outside scope.",
+                "why": "Corroboration and limitations make the work more defensible and easier to review later.",
+                "tools": ["ByteCase Notes", "ByteCase Verify", "Timeline tools", "Forensic suite reports"],
+                "artifacts": ["Artifact index", "Screenshots", "Exported parser output", "Timeline entries", "Hash manifests"],
+                "cautions": ["Do not turn one artifact into a broad conclusion.", "Record unsupported parsers or failed ingest modules.", "Missing artifacts may result from scope, collection type, settings, or normal system behavior."],
+                "document": ["Corroborating artifacts", "Contradicting/unclear items", "Tool limitations", "Examiner notes", "Artifact references"],
+            },
+        ],
+    },
+    {
+        "id": "external_media_hash_copy_refresher",
+        "title": "External Media Hash / Copy Refresher",
+        "category": "Acquisition / Imaging",
+        "level": "Beginner",
+        "summary": "Use when handling USB drives, SD cards, external drives, or other removable media where the task is to preserve, hash, copy, or document media contents.",
+        "use_when": [
+            "You are working with removable media or a small external storage device.",
+            "The task may be hash-only, targeted copy, or full imaging depending on scope.",
+            "You need a reminder about write protection, labels, and output documentation.",
+        ],
+        "avoid_when": [
+            "The media appears damaged and should be handled by a specialist.",
+            "The request requires capabilities outside your tools/training.",
+            "Agency policy requires a different preservation method.",
+        ],
+        "steps": [
+            {
+                "title": "Document media before connection",
+                "field_focus": "Record labels, markings, condition, and identifiers before connecting media.",
+                "learning_detail": "Photographing and documenting removable media before connection helps preserve the condition encountered and supports later chain/context notes.",
+                "why": "Small media can be mislabeled, swapped, or physically altered. Pre-connection documentation reduces ambiguity.",
+                "tools": ["Camera", "Evidence label", "ByteCase Intake", "ByteCase Acquire"],
+                "artifacts": ["Media photos", "Make/model", "Serial number", "Capacity", "Evidence item number"],
+                "cautions": ["Do not rely only on written labels.", "Avoid connecting unknown media to non-forensic systems."],
+                "document": ["Item number", "Media type", "Visible identifiers", "Condition", "Photographs taken"],
+            },
+            {
+                "title": "Choose write protection and acquisition approach",
+                "field_focus": "Decide whether full imaging, logical copy, or hash-only work fits the request.",
+                "learning_detail": "Removable media can often be imaged through a hardware write blocker, software write protection, or tool-specific workflow. A targeted copy may be appropriate when scope is limited, but the limitation should be clear.",
+                "why": "The preservation method affects what can be said later about completeness and integrity.",
+                "tools": ["Hardware write blocker", "Software write blocker", "FTK Imager", "Guymager", "dc3dd/dd where trained", "ByteCase Validate"],
+                "artifacts": ["Full image", "Logical copy", "Hash manifest", "Tool log", "Write blocker validation record"],
+                "cautions": ["Do not claim a targeted copy is a full image.", "Validate write-blocking process where appropriate.", "Document why the method was selected."],
+                "document": ["Write protection method", "Tool/version", "Acquisition type", "Reason for method", "Validation reference if used"],
+            },
+            {
+                "title": "Hash source and outputs where appropriate",
+                "field_focus": "Use hashes to support integrity checks for media, images, copied files, or exported results.",
+                "learning_detail": "Hashing helps detect changes to data between preservation, transfer, and later review. Hashes support integrity; they do not explain what a file means or who used it.",
+                "why": "Hash documentation makes later rechecks and court/report preparation easier.",
+                "tools": ["ByteCase Verify", "FTK Imager", "hashdeep/md5deep", "Forensic suite hashing"],
+                "artifacts": ["MD5/SHA-256 hashes", "Hash manifest", "Verification report", "Tool log"],
+                "cautions": ["Use agency-approved hash algorithms.", "File-level hashes and image-level hashes answer different questions.", "A matching hash is not an analysis conclusion."],
+                "document": ["Algorithm", "Hash tool/version", "Source/output hashed", "Manifest path", "Verification result"],
+            },
+            {
+                "title": "Preserve outputs and record limitations",
+                "field_focus": "Keep the copied/imaged output, logs, hashes, and notes together.",
+                "learning_detail": "A clean output packet should make it easy to understand what was handled, how it was preserved, where outputs are stored, and what limitations applied.",
+                "why": "Small media tasks can look simple, but missing logs or unclear scope can create problems later.",
+                "tools": ["ByteCase Acquire", "ByteCase Verify", "ByteCase Notes", "Agency storage location"],
+                "artifacts": ["Image/copy output", "Logs", "Hash manifests", "Notes", "Photos"],
+                "cautions": ["Do not mix evidence outputs with unrelated working files.", "Do not overwrite prior exports without documenting it."],
+                "document": ["Output folder", "Files created", "Any errors", "Limitations", "Next review step"],
+            },
+        ],
+    }
 ]
+
+
+GLOSSARY = [
+    {
+        "term": "Field Reference Mode",
+        "category": "Playbooks",
+        "definition": "A shorter view meant for real-time reference during a task. It emphasizes order, documentation, cautions, and quick reminders.",
+        "related": ["Learning / Refresher Mode", "Step card", "Boundary notice"],
+    },
+    {
+        "term": "Learning / Refresher Mode",
+        "category": "Playbooks",
+        "definition": "A deeper view meant for downtime learning or refreshers before performing less-common work. It expands the why, tools, artifacts, cautions, and documentation reminders.",
+        "related": ["Field Reference Mode", "Step card", "Examiner judgment"],
+    },
+    {
+        "term": "Live acquisition",
+        "category": "Acquisition",
+        "definition": "Collection from a powered-on system. It may preserve volatile state but also changes the system and requires careful documentation and scope control.",
+        "related": ["RAM capture", "Volatile data", "Network isolation", "Encryption context"],
+    },
+    {
+        "term": "Dead-box imaging",
+        "category": "Imaging",
+        "definition": "Preservation of storage media when the device is powered off or the storage media is removed and handled through a controlled imaging process.",
+        "related": ["Write blocker", "Forensic image", "Hash verification"],
+    },
+    {
+        "term": "RAM capture",
+        "category": "Memory",
+        "definition": "Collection of system memory from a live machine. RAM can contain volatile process, connection, command-line, session, and encryption-related context.",
+        "related": ["Volatility", "Volatile data", "Live acquisition"],
+    },
+    {
+        "term": "Volatility",
+        "category": "Memory",
+        "definition": "A memory forensics framework commonly used to examine memory images. Plugin output should be reviewed in context and documented as tool output, not as an automatic conclusion.",
+        "related": ["windows.info", "windows.pslist", "windows.pstree", "windows.netscan", "windows.malfind"],
+    },
+    {
+        "term": "Write blocker",
+        "category": "Preservation",
+        "definition": "A hardware, software, or process control used to reduce or prevent writes to source media during acquisition. Local validation and documentation matter.",
+        "related": ["ByteCase Validate", "Dead-box imaging", "External media"],
+    },
+    {
+        "term": "Hash verification",
+        "category": "Integrity",
+        "definition": "A process for checking whether data matches a previously recorded hash value. Hashes support integrity checks; they do not interpret content or user intent.",
+        "related": ["ByteCase Verify", "SHA-256", "MD5", "Manifest"],
+    },
+    {
+        "term": "Artifact",
+        "category": "Analysis",
+        "definition": "A data item or record that may help answer a forensic question. Artifact presence, absence, or parser output must be interpreted in context.",
+        "related": ["ByteCase Notes", "Artifact index", "Corroboration"],
+    },
+    {
+        "term": "Overclaim",
+        "category": "Reporting",
+        "definition": "A statement that goes beyond what the artifact, tool output, or available context supports. Playbooks should help examiners document observations without overstating conclusions.",
+        "related": ["Limitations", "Corroboration", "Examiner judgment"],
+    },
+]
+
+
+def search_playbooks(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for playbook in PLAYBOOKS:
+        haystack_parts = [playbook.get("title", ""), playbook.get("category", ""), playbook.get("summary", "")]
+        for step in playbook.get("steps", []):
+            haystack_parts.extend([step.get("title", ""), step.get("field_focus", ""), step.get("learning_detail", ""), step.get("why", "")])
+            for key in ("tools", "artifacts", "cautions", "document"):
+                haystack_parts.extend(step.get(key, []))
+        haystack = "\n".join(str(part) for part in haystack_parts).lower()
+        if needle in haystack:
+            results.append(playbook)
+    return results
+
+
+def search_glossary(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for item in GLOSSARY:
+        haystack = "\n".join([item.get("term", ""), item.get("category", ""), item.get("definition", ""), "\n".join(item.get("related", []))]).lower()
+        if needle in haystack:
+            results.append(item)
+    return results
 
 
 def get_playbook(playbook_id):

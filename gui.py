@@ -8,7 +8,20 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 from bytecase_theme import apply_theme, configure_toplevel, get_current_theme, style_text_widget
-from playbook_data import APP_ATTRIBUTION, APP_DOMAIN, APP_NAME, APP_SUBTITLE, APP_VERSION, PLAYBOOKS, PLAYBOOK_BOUNDARY, categories, get_playbook
+from playbook_data import (
+    APP_ATTRIBUTION,
+    APP_DOMAIN,
+    APP_NAME,
+    APP_SUBTITLE,
+    APP_VERSION,
+    GLOSSARY,
+    PLAYBOOKS,
+    PLAYBOOK_BOUNDARY,
+    categories,
+    get_playbook,
+    search_glossary,
+    search_playbooks,
+)
 from session_core import create_session, load_session, save_session_outputs, session_summary
 from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
 from validators import validate_session
@@ -39,10 +52,20 @@ class ScrollableFrame(ttk.Frame):
 
     def _on_mousewheel(self, event):
         try:
-            if self.winfo_containing(event.x_root, event.y_root) is not None:
-                self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-        except tk.TclError:
-            pass
+            target = self.winfo_containing(event.x_root, event.y_root)
+        except Exception:
+            return
+        if target is None:
+            return
+        try:
+            widget = target
+            while widget is not None:
+                if widget in (self, self.canvas, self.frame):
+                    self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+                    return
+                widget = getattr(widget, "master", None)
+        except Exception:
+            return
 
 
 class PlaybooksApp:
@@ -51,8 +74,8 @@ class PlaybooksApp:
         self.settings = load_settings()
         self.colors = apply_theme(root, self.settings)
         self.root.title(f"{APP_NAME} v{APP_VERSION}")
-        self.root.geometry("1180x760")
-        self.root.minsize(1060, 680)
+        self.root.geometry("1200x780")
+        self.root.minsize(1080, 700)
         self.session = create_session(PLAYBOOKS[0]["id"], self.settings.get("defaults", {}).get("mode", "Field Reference"))
         self.current_step_index = 1
         self.last_export_folder = None
@@ -74,16 +97,19 @@ class PlaybooksApp:
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
         self.playbook_tab = ScrollableFrame(self.notebook, self.colors)
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
+        self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
         self.notebook.add(self.start_tab, text="Start")
         self.notebook.add(self.playbook_tab, text="Playbook")
-        self.notebook.add(self.session_tab, text="Session / Export")
+        self.notebook.add(self.session_tab, text="Progress / Export")
+        self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
         self._build_playbook_tab(self.playbook_tab.frame)
         self._build_session_tab(self.session_tab.frame)
+        self._build_reference_tab(self.reference_tab.frame)
         self._build_settings_tab(self.settings_tab.frame)
 
     def _panel(self, parent, title=None):
@@ -100,6 +126,7 @@ class PlaybooksApp:
         mode.grid(row=0, column=1, sticky="w", padx=10, pady=8)
         mode.bind("<<ComboboxSelected>>", lambda _e: self.set_mode())
         ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=10, pady=8)
+        ttk.Button(intro, text="Search Reference", command=lambda: self.notebook.select(self.reference_tab)).grid(row=0, column=3, padx=10, pady=8)
 
         selector = self._panel(parent, "Select a playbook")
         selector.columnconfigure(0, weight=1)
@@ -126,14 +153,15 @@ class PlaybooksApp:
         style_text_widget(self.preview_text, self.colors)
         self.preview_text.configure(state="disabled")
 
-        quick = self._panel(parent, "Current session")
+        quick = self._panel(parent, "Current playbook session")
         self.start_summary_var = tk.StringVar()
         ttk.Label(quick, textvariable=self.start_summary_var).pack(anchor="w", padx=10, pady=8)
         actions = ttk.Frame(quick)
         actions.pack(fill="x", padx=10, pady=(0, 10))
         ttk.Button(actions, text="Continue", command=lambda: self.notebook.select(self.playbook_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Save / Export", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
 
     def _build_playbook_tab(self, parent):
         top = self._panel(parent, "Current playbook")
@@ -172,7 +200,7 @@ class PlaybooksApp:
         self.step_check_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(card, text="Mark as reviewed", variable=self.step_check_var, command=self.update_step_checked).grid(row=0, column=1, sticky="e", padx=10, pady=8)
         ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
-        ttk.Label(card, text="Step notes").grid(row=2, column=0, sticky="w", padx=10, pady=(2, 2))
+        ttk.Label(card, text="Step reference notes").grid(row=2, column=0, sticky="w", padx=10, pady=(2, 2))
         self.step_notes_text = tk.Text(card, height=6)
         self.step_notes_text.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
         style_text_widget(self.step_notes_text, self.colors)
@@ -186,33 +214,70 @@ class PlaybooksApp:
         self.detail_text.configure(state="disabled")
 
     def _build_session_tab(self, parent):
-        case = self._panel(parent, "Session details")
-        case.columnconfigure(1, weight=1)
-        ttk.Label(case, text="Case Number").grid(row=0, column=0, sticky="w", padx=10, pady=8)
-        self.case_var = tk.StringVar()
-        ttk.Entry(case, textvariable=self.case_var).grid(row=0, column=1, sticky="ew", padx=10, pady=8)
-        ttk.Label(case, text="Examiner").grid(row=1, column=0, sticky="w", padx=10, pady=8)
-        self.examiner_var = tk.StringVar()
-        ttk.Entry(case, textvariable=self.examiner_var).grid(row=1, column=1, sticky="ew", padx=10, pady=8)
-        ttk.Button(case, text="Update Session", command=self.update_session_details).grid(row=0, column=2, rowspan=2, padx=10, pady=8)
-
-        notes = self._panel(parent, "Overall session notes")
-        self.session_notes_text = tk.Text(notes, height=8)
-        self.session_notes_text.pack(fill="x", padx=10, pady=10)
-        style_text_widget(self.session_notes_text, self.colors)
+        summary_panel = self._panel(parent, "Playbook progress")
+        summary_panel.columnconfigure(0, weight=1)
+        ttk.Label(
+            summary_panel,
+            text="This saves the current playbook, selected mode, current step, reviewed steps, and step reference notes. It does not create case notes or write under a case folder.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 4))
+        self.progress_summary_var = tk.StringVar()
+        ttk.Label(summary_panel, textvariable=self.progress_summary_var).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
 
         review = self._panel(parent, "Review / export")
-        self.review_text = tk.Text(review, height=12)
+        self.review_text = tk.Text(review, height=14)
         self.review_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.review_text, self.colors)
         self.review_text.configure(state="disabled")
         actions = ttk.Frame(review)
         actions.pack(fill="x", padx=10, pady=(0, 10))
         ttk.Button(actions, text="Review", command=self.refresh_review).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Export", style="Accent.TButton", command=self.export_session).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Export + Open", command=lambda: self.export_session(open_after=True)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save Session", style="Accent.TButton", command=self.export_session).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save + Open", command=lambda: self.export_session(open_after=True)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open Last", command=self.open_last_folder).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="New Session", command=self.new_session).pack(side="right", padx=(8, 0))
+
+    def _build_reference_tab(self, parent):
+        search_panel = self._panel(parent, "Search playbooks and glossary")
+        search_panel.columnconfigure(1, weight=1)
+        ttk.Label(search_panel, text="Search").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.reference_query_var = tk.StringVar()
+        entry = ttk.Entry(search_panel, textvariable=self.reference_query_var)
+        entry.grid(row=0, column=1, sticky="ew", padx=10, pady=8)
+        entry.bind("<Return>", lambda _e: self.run_reference_search())
+        ttk.Button(search_panel, text="Search", style="Accent.TButton", command=self.run_reference_search).grid(row=0, column=2, padx=10, pady=8)
+        ttk.Button(search_panel, text="Clear", command=self.clear_reference_search).grid(row=0, column=3, padx=10, pady=8)
+        ttk.Label(search_panel, text="Search examples: RAM, hash, write blocker, browser, Volatility, live acquisition", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
+
+        body = self._panel(parent, "Reference results")
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=2)
+        body.rowconfigure(0, weight=1)
+        self.reference_results = []
+        self.reference_tree = ttk.Treeview(body, columns=("type", "title"), show="headings", height=12)
+        self.reference_tree.heading("type", text="Type")
+        self.reference_tree.heading("title", text="Result")
+        self.reference_tree.column("type", width=120, stretch=False)
+        self.reference_tree.column("title", width=360)
+        self.reference_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.reference_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_reference_result())
+        self.reference_detail_text = tk.Text(body, height=18)
+        self.reference_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        style_text_widget(self.reference_detail_text, self.colors)
+        self.reference_detail_text.configure(state="disabled")
+        actions = ttk.Frame(body)
+        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Open Playbook", command=self.open_reference_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Show Glossary", command=self.show_all_glossary).pack(side="left", padx=(0, 8))
+
+        starter = self._panel(parent, "What Playbooks is for")
+        text = (
+            "ByteCase Playbooks is the explainer layer. It helps new examiners, occasional examiners, or anyone needing a refresher understand why steps matter, what order to think in, what tools may apply, what artifacts are common, and what to document.\n\n"
+            "ByteCase Workflow will track case progress. Playbooks explains the work."
+        )
+        ttk.Label(starter, text=text, wraplength=1040).pack(anchor="w", padx=10, pady=10)
+        self.show_all_glossary()
 
     def _build_settings_tab(self, parent):
         output = self._panel(parent, "Output")
@@ -274,6 +339,7 @@ class PlaybooksApp:
         self.save_current_step_notes()
         self.session = create_session(pb["id"], self.mode_var.get())
         self.current_step_index = 1
+        self.sync_current_step_index()
         self.refresh_all()
         self.notebook.select(self.playbook_tab)
 
@@ -296,9 +362,11 @@ class PlaybooksApp:
         self.refresh_playbook_header()
         self.refresh_steps_tree()
         self.refresh_current_step()
-        self.case_var.set(self.session.get("case_number", ""))
-        self.examiner_var.set(self.session.get("examiner", ""))
-        self.set_text(self.session_notes_text, self.session.get("session_notes", ""), readonly=False)
+        try:
+            self.current_step_index = int(self.session.get("current_step_index", self.current_step_index))
+        except (TypeError, ValueError):
+            self.current_step_index = 1
+        self.sync_current_step_index()
         self.refresh_start_summary()
         self.refresh_review()
 
@@ -323,6 +391,7 @@ class PlaybooksApp:
             return
         self.save_current_step_notes()
         self.current_step_index = int(selection[0])
+        self.sync_current_step_index()
         self.refresh_current_step()
 
     def get_step(self):
@@ -413,6 +482,9 @@ class PlaybooksApp:
     def mark_dirty_step_notes(self):
         pass
 
+    def sync_current_step_index(self):
+        self.session["current_step_index"] = self.current_step_index
+
     def save_current_step_notes(self):
         try:
             state = self.get_step_state()
@@ -424,6 +496,7 @@ class PlaybooksApp:
     def previous_step(self):
         self.save_current_step_notes()
         self.current_step_index = max(1, self.current_step_index - 1)
+        self.sync_current_step_index()
         self.refresh_steps_tree()
         self.refresh_current_step()
 
@@ -431,47 +504,63 @@ class PlaybooksApp:
         self.save_current_step_notes()
         max_step = len(self.session.get("step_state", []))
         self.current_step_index = min(max_step, self.current_step_index + 1)
+        self.sync_current_step_index()
         self.refresh_steps_tree()
         self.refresh_current_step()
 
     def update_session_details(self):
-        self.session["case_number"] = self.case_var.get().strip()
-        self.session["examiner"] = self.examiner_var.get().strip()
-        self.session["session_notes"] = self.session_notes_text.get("1.0", "end-1c")
         self.refresh_start_summary()
         self.refresh_review()
-        messagebox.showinfo("Session updated", "Session details updated.")
 
     def refresh_start_summary(self):
+        self.sync_current_step_index()
         summary = session_summary(self.session)
-        self.start_summary_var.set(
-            f"Current: {summary['playbook_title']} | Mode: {summary['mode']} | Reviewed: {summary['checked_steps']} of {summary['total_steps']} | Steps with notes: {summary['steps_with_notes']}"
+        text = (
+            f"Current: {summary['playbook_title']} | Mode: {summary['mode']} | "
+            f"Step: {summary['current_step_index']} of {summary['total_steps']} | "
+            f"Reviewed: {summary['checked_steps']} of {summary['total_steps']} | "
+            f"Steps with notes: {summary['steps_with_notes']}"
         )
+        self.start_summary_var.set(text)
+        if hasattr(self, "progress_summary_var"):
+            self.progress_summary_var.set(text)
 
     def refresh_review(self):
         self.save_current_step_notes()
-        self.session["case_number"] = self.case_var.get().strip() if hasattr(self, "case_var") else self.session.get("case_number", "")
-        self.session["examiner"] = self.examiner_var.get().strip() if hasattr(self, "examiner_var") else self.session.get("examiner", "")
-        if hasattr(self, "session_notes_text"):
-            self.session["session_notes"] = self.session_notes_text.get("1.0", "end-1c")
+        self.sync_current_step_index()
         summary = session_summary(self.session)
         warnings = validate_session(self.session)
         lines = [
             f"Playbook: {summary['playbook_title']}",
             f"Mode: {summary['mode']}",
-            f"Case Number: {self.session.get('case_number', '') or 'NO_CASE'}",
-            f"Examiner: {self.session.get('examiner', '')}",
+            f"Current Step: {summary['current_step_index']} of {summary['total_steps']}",
             f"Reviewed Steps: {summary['checked_steps']} of {summary['total_steps']}",
             f"Steps With Notes: {summary['steps_with_notes']}",
+            "",
+            "Saved Session Includes:",
+            "- Selected playbook",
+            "- Selected mode",
+            "- Current step",
+            "- Reviewed step checkboxes",
+            "- Step reference notes",
+            "",
+            "Saved Session Does Not Include:",
+            "- Case notes",
+            "- Case number",
+            "- Examiner name",
+            "- Evidence files",
             "",
             "Warnings:" if warnings else "Warnings: None",
         ]
         lines.extend(f"- {warning}" for warning in warnings)
         lines.append("")
-        lines.append(f"Output Root: {get_output_root(self.settings)}")
+        lines.append(f"Output Folder: {get_output_root(self.settings)}\\playbooks\\sessions")
         self.set_text(self.review_text, "\n".join(lines))
+        self.refresh_start_summary()
 
     def export_session(self, open_after=False):
+        self.save_current_step_notes()
+        self.sync_current_step_index()
         self.refresh_review()
         try:
             json_path, txt_path, docx_path = save_session_outputs(self.settings, self.session)
@@ -507,7 +596,7 @@ class PlaybooksApp:
             return
         try:
             self.session = load_session(path)
-            self.current_step_index = 1
+            self.current_step_index = int(self.session.get("current_step_index", 1))
             self.refresh_all()
             self.notebook.select(self.playbook_tab)
         except Exception as exc:
@@ -519,7 +608,82 @@ class PlaybooksApp:
             return
         self.session = create_session(pb["id"], self.mode_var.get())
         self.current_step_index = 1
+        self.sync_current_step_index()
         self.refresh_all()
+
+    def run_reference_search(self):
+        query = self.reference_query_var.get().strip()
+        self.reference_results = []
+        for item in search_glossary(query):
+            self.reference_results.append({"type": "Glossary", "title": item.get("term", ""), "data": item})
+        for playbook in search_playbooks(query):
+            self.reference_results.append({"type": "Playbook", "title": playbook.get("title", ""), "data": playbook})
+        self.populate_reference_tree()
+        if self.reference_results:
+            self.reference_tree.selection_set("0")
+            self.show_reference_result()
+        else:
+            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, or artifact.")
+
+    def clear_reference_search(self):
+        self.reference_query_var.set("")
+        self.show_all_glossary()
+
+    def show_all_glossary(self):
+        self.reference_results = [{"type": "Glossary", "title": item.get("term", ""), "data": item} for item in GLOSSARY]
+        self.populate_reference_tree()
+        if self.reference_results:
+            self.reference_tree.selection_set("0")
+            self.show_reference_result()
+
+    def populate_reference_tree(self):
+        for item in self.reference_tree.get_children():
+            self.reference_tree.delete(item)
+        for idx, result in enumerate(self.reference_results):
+            self.reference_tree.insert("", "end", iid=str(idx), values=(result.get("type", ""), result.get("title", "")))
+
+    def selected_reference_result(self):
+        selection = self.reference_tree.selection()
+        if not selection:
+            return None
+        try:
+            idx = int(selection[0])
+            return self.reference_results[idx]
+        except (ValueError, IndexError):
+            return None
+
+    def show_reference_result(self):
+        result = self.selected_reference_result()
+        if not result:
+            return
+        data = result.get("data", {})
+        if result.get("type") == "Glossary":
+            lines = [data.get("term", ""), f"Category: {data.get('category', '')}", "", data.get("definition", ""), "", "Related terms:"]
+            lines.extend(f"- {item}" for item in data.get("related", []))
+        else:
+            lines = [data.get("title", ""), f"Category: {data.get('category', '')}", f"Level: {data.get('level', '')}", "", data.get("summary", ""), "", "Use when:"]
+            lines.extend(f"- {item}" for item in data.get("use_when", []))
+            lines.append("")
+            lines.append("Pause when:")
+            lines.extend(f"- {item}" for item in data.get("avoid_when", []))
+            lines.append("")
+            lines.append("Steps:")
+            for idx, step in enumerate(data.get("steps", []), start=1):
+                lines.append(f"{idx}. {step.get('title', '')}")
+        self.set_text(self.reference_detail_text, "\n".join(lines))
+
+    def open_reference_playbook(self):
+        result = self.selected_reference_result()
+        if not result or result.get("type") != "Playbook":
+            messagebox.showinfo("No playbook selected", "Select a Playbook result first.")
+            return
+        playbook = result.get("data", {})
+        self.save_current_step_notes()
+        self.session = create_session(playbook.get("id"), self.mode_var.get())
+        self.current_step_index = 1
+        self.sync_current_step_index()
+        self.refresh_all()
+        self.notebook.select(self.playbook_tab)
 
     def browse_output_root(self):
         folder = filedialog.askdirectory(title="Select ByteCase output root")

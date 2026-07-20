@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.1.0
+v0.2.3
 
 ## Purpose
 
@@ -31,14 +31,29 @@ It is not the same as ByteCase Workflow.
 - **ByteCase Playbooks explains the work.**
 - **ByteCase Workflow tracks the work.**
 
-## v0.1.0 included playbooks
+## v0.2.3 included playbooks
 
-This first sprint includes four starter playbooks:
+This release includes six built-in playbooks:
 
 1. Live Computer Acquisition / RAM Capture
 2. Dead-Box Computer Imaging
 3. Mobile Device Extraction Refresher
 4. Memory / RAM Analysis Refresher
+5. Windows Artifact Review Refresher
+6. External Media Hash / Copy Refresher
+
+## v0.2.3 updates
+
+v0.2.3 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
+
+Changes include:
+
+- Replaced Python 3.10+ type annotations with older-compatible typing
+- Fixed a Tkinter mouse-wheel callback error caused by combobox popup widgets
+- Removed case number, examiner, and overall case/session notes fields
+- Session save now records only the current playbook, mode, current step, reviewed steps, and step reference notes
+- Session exports now save under `ByteCase\playbooks\sessions\` instead of a case folder
+- Preserved the Reference tab, glossary search, Windows artifact review playbook, and external media hash/copy playbook
 
 ## Main modes
 
@@ -61,7 +76,7 @@ Each playbook step includes:
 - Common artifacts / outputs
 - Cautions
 - What to document
-- Optional examiner notes
+- Optional step reference notes
 
 Each step has quick explanation buttons:
 
@@ -83,14 +98,15 @@ Session exports are stored as:
 
 ```text
 ByteCase\
-  <case_number>\
-    playbooks\
-      sessions\
-        <timestamp>_<playbook_name>\
-          bytecase_playbook_session_<playbook>_<timestamp>.json
-          bytecase_playbook_session_<playbook>_<timestamp>.txt
-          bytecase_playbook_session_<playbook>_<timestamp>.docx
+  playbooks\
+    sessions\
+      <timestamp>_<playbook_name>\
+        bytecase_playbook_session_<playbook>_<timestamp>.json
+        bytecase_playbook_session_<playbook>_<timestamp>.txt
+        bytecase_playbook_session_<playbook>_<timestamp>.docx
 ```
+
+Saved playbook sessions are not case notes and are not written under a case folder. They are intended to reopen the same playbook, mode, current step, reviewed steps, and step reference notes.
 
 ## Dependencies
 
@@ -105,11 +121,11 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Create ByteCase Playbooks v0.1.0
+Fix Playbooks session scope and Python compatibility
 ```
 
 ## Recommended commit description
 
 ```text
-Adds the initial ByteCase Playbooks guided examiner reference tool with click-based playbook selection, Field Reference and Learning/Refresher modes, step cards, explanation panels, session notes, save/load support, and JSON/TXT/DOCX exports for starter live acquisition, dead-box imaging, mobile extraction, and memory analysis playbooks.
+Fixes Python compatibility and Tkinter mouse-wheel handling, then simplifies Playbooks session saving so it records only the current playbook state instead of case details or case notes. Session output now saves under ByteCase/playbooks/sessions, preserving Playbooks as a reference/refresher tool rather than a case workflow tracker.
 ```

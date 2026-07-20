@@ -14,7 +14,7 @@ def add_bullets(doc: Document, values):
         doc.add_paragraph(str(value), style="List Bullet")
 
 
-def export_session_docx(session: Dict[str, Any], output_path: str | Path) -> Path:
+def export_session_docx(session: Dict[str, Any], output_path) -> Path:
     output_path = Path(output_path)
     doc = Document()
     styles = doc.styles
@@ -29,10 +29,9 @@ def export_session_docx(session: Dict[str, Any], output_path: str | Path) -> Pat
     meta = doc.add_table(rows=0, cols=2)
     for label, value in [
         ("Version", APP_VERSION),
-        ("Case Number", session.get("case_number", "")),
-        ("Examiner", session.get("examiner", "")),
         ("Mode", session.get("mode", "")),
         ("Playbook", session.get("playbook_title", "")),
+        ("Current Step", session.get("current_step_index", 1)),
         ("Created", session.get("created_at", "")),
         ("Updated", session.get("updated_at", "")),
     ]:
@@ -53,11 +52,13 @@ def export_session_docx(session: Dict[str, Any], output_path: str | Path) -> Pat
         add_bullets(doc, playbook.get("avoid_when", []))
 
         state = {item.get("index"): item for item in session.get("step_state", [])}
+        current_step = session.get("current_step_index", 1)
         doc.add_heading("Steps", level=1)
         for idx, step in enumerate(playbook.get("steps", []), start=1):
             item = state.get(idx, {})
             mark = "[x]" if item.get("checked") else "[ ]"
-            doc.add_heading(f"{mark} Step {idx}: {step.get('title', '')}", level=2)
+            pointer = " - current step" if idx == current_step else ""
+            doc.add_heading(f"{mark} Step {idx}: {step.get('title', '')}{pointer}", level=2)
             doc.add_paragraph(f"Field Focus: {step.get('field_focus', '')}")
             doc.add_paragraph(f"Learning Detail: {step.get('learning_detail', '')}")
             doc.add_paragraph(f"Why: {step.get('why', '')}")
@@ -66,16 +67,13 @@ def export_session_docx(session: Dict[str, Any], output_path: str | Path) -> Pat
                 add_bullets(doc, step.get(key, []))
             notes = (item.get("notes") or "").strip()
             if notes:
-                doc.add_paragraph("Step Notes:")
+                doc.add_paragraph("Step Reference Notes:")
                 doc.add_paragraph(notes)
-
-    if (session.get("session_notes") or "").strip():
-        doc.add_heading("Session Notes", level=1)
-        doc.add_paragraph(session.get("session_notes", ""))
 
     summary = session_summary(session)
     doc.add_heading("Session Summary", level=1)
-    doc.add_paragraph(f"Checked Steps: {summary['checked_steps']} of {summary['total_steps']}")
+    doc.add_paragraph(f"Current Step: {summary['current_step_index']} of {summary['total_steps']}")
+    doc.add_paragraph(f"Reviewed Steps: {summary['checked_steps']} of {summary['total_steps']}")
     doc.add_paragraph(f"Steps With Notes: {summary['steps_with_notes']}")
 
     doc.save(output_path)
