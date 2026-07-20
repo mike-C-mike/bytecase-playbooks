@@ -1,0 +1,17 @@
+{
+  "app": {
+    "name": "ByteCase Playbooks",
+    "version": "0.1.0"
+  },
+  "appearance": {
+    "theme": "system"
+  },
+  "output": {
+    "output_root": "",
+    "export_txt": true,
+    "export_docx": true
+  },
+  "defaults": {
+    "mode": "Field Reference"
+  }
+}

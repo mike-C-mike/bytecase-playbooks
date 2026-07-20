@@ -1,0 +1,545 @@
+"""Tkinter GUI for ByteCase Playbooks."""
+import json
+import os
+import subprocess
+import sys
+import tkinter as tk
+from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
+
+from bytecase_theme import apply_theme, configure_toplevel, get_current_theme, style_text_widget
+from playbook_data import APP_ATTRIBUTION, APP_DOMAIN, APP_NAME, APP_SUBTITLE, APP_VERSION, PLAYBOOKS, PLAYBOOK_BOUNDARY, categories, get_playbook
+from session_core import create_session, load_session, save_session_outputs, session_summary
+from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
+from validators import validate_session
+
+
+class ScrollableFrame(ttk.Frame):
+    def __init__(self, parent, colors, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.colors = colors
+        self.canvas = tk.Canvas(self, highlightthickness=0, bg=colors["app_background"])
+        self.v_scroll = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.frame = ttk.Frame(self.canvas)
+        self.window_id = self.canvas.create_window((0, 0), window=self.frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=self.v_scroll.set)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+        self.v_scroll.grid(row=0, column=1, sticky="ns")
+        self.columnconfigure(0, weight=1)
+        self.rowconfigure(0, weight=1)
+        self.frame.bind("<Configure>", self._on_frame_configure)
+        self.canvas.bind("<Configure>", self._on_canvas_configure)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+
+    def _on_frame_configure(self, _event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event):
+        self.canvas.itemconfigure(self.window_id, width=event.width)
+
+    def _on_mousewheel(self, event):
+        try:
+            if self.winfo_containing(event.x_root, event.y_root) is not None:
+                self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        except tk.TclError:
+            pass
+
+
+class PlaybooksApp:
+    def __init__(self, root: tk.Tk):
+        self.root = root
+        self.settings = load_settings()
+        self.colors = apply_theme(root, self.settings)
+        self.root.title(f"{APP_NAME} v{APP_VERSION}")
+        self.root.geometry("1180x760")
+        self.root.minsize(1060, 680)
+        self.session = create_session(PLAYBOOKS[0]["id"], self.settings.get("defaults", {}).get("mode", "Field Reference"))
+        self.current_step_index = 1
+        self.last_export_folder = None
+        self.step_check_vars = {}
+        self.step_note_widgets = {}
+        self._build_ui()
+        self.refresh_all()
+
+    def _build_ui(self):
+        header = ttk.Frame(self.root)
+        header.pack(fill="x", padx=14, pady=(12, 6))
+        ttk.Label(header, text=APP_NAME, style="Title.TLabel").pack(anchor="w")
+        ttk.Label(header, text=APP_SUBTITLE, style="Muted.TLabel").pack(anchor="w")
+        ttk.Label(header, text=APP_ATTRIBUTION, style="Muted.TLabel").pack(anchor="w")
+
+        self.notebook = ttk.Notebook(self.root)
+        self.notebook.pack(fill="both", expand=True, padx=14, pady=(0, 12))
+
+        self.start_tab = ScrollableFrame(self.notebook, self.colors)
+        self.playbook_tab = ScrollableFrame(self.notebook, self.colors)
+        self.session_tab = ScrollableFrame(self.notebook, self.colors)
+        self.settings_tab = ScrollableFrame(self.notebook, self.colors)
+
+        self.notebook.add(self.start_tab, text="Start")
+        self.notebook.add(self.playbook_tab, text="Playbook")
+        self.notebook.add(self.session_tab, text="Session / Export")
+        self.notebook.add(self.settings_tab, text="Settings")
+
+        self._build_start_tab(self.start_tab.frame)
+        self._build_playbook_tab(self.playbook_tab.frame)
+        self._build_session_tab(self.session_tab.frame)
+        self._build_settings_tab(self.settings_tab.frame)
+
+    def _panel(self, parent, title=None):
+        panel = ttk.LabelFrame(parent, text=title) if title else ttk.Frame(parent, style="Panel.TFrame")
+        panel.pack(fill="x", padx=10, pady=8)
+        return panel
+
+    def _build_start_tab(self, parent):
+        intro = self._panel(parent, "What do you need help with?")
+        intro.columnconfigure(1, weight=1)
+        ttk.Label(intro, text="Mode:").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.mode_var = tk.StringVar(value=self.session.get("mode", "Field Reference"))
+        mode = ttk.Combobox(intro, textvariable=self.mode_var, values=["Field Reference", "Learning / Refresher"], state="readonly", width=24)
+        mode.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        mode.bind("<<ComboboxSelected>>", lambda _e: self.set_mode())
+        ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=10, pady=8)
+
+        selector = self._panel(parent, "Select a playbook")
+        selector.columnconfigure(0, weight=1)
+        selector.columnconfigure(1, weight=1)
+        ttk.Label(selector, text="Category").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        ttk.Label(selector, text="Playbooks").grid(row=0, column=1, sticky="w", padx=10, pady=(8, 2))
+        self.category_var = tk.StringVar(value="All")
+        self.category_box = ttk.Combobox(selector, textvariable=self.category_var, values=["All"] + categories(), state="readonly")
+        self.category_box.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 8))
+        self.category_box.bind("<<ComboboxSelected>>", lambda _e: self.populate_playbook_list())
+        self.playbook_list = tk.Listbox(selector, height=8, exportselection=False)
+        self.playbook_list.grid(row=1, column=1, sticky="nsew", padx=10, pady=(0, 8))
+        self.playbook_list.bind("<<ListboxSelect>>", lambda _e: self.preview_selected_playbook())
+        selector.rowconfigure(1, weight=1)
+        buttons = ttk.Frame(selector)
+        buttons.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 8))
+        ttk.Button(buttons, text="Open Playbook", style="Accent.TButton", command=self.open_selected_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Learning View", command=lambda: self.quick_mode("Learning / Refresher")).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Field View", command=lambda: self.quick_mode("Field Reference")).pack(side="left", padx=(0, 8))
+
+        preview = self._panel(parent, "Preview")
+        self.preview_text = tk.Text(preview, height=12)
+        self.preview_text.pack(fill="x", padx=10, pady=10)
+        style_text_widget(self.preview_text, self.colors)
+        self.preview_text.configure(state="disabled")
+
+        quick = self._panel(parent, "Current session")
+        self.start_summary_var = tk.StringVar()
+        ttk.Label(quick, textvariable=self.start_summary_var).pack(anchor="w", padx=10, pady=8)
+        actions = ttk.Frame(quick)
+        actions.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Continue", command=lambda: self.notebook.select(self.playbook_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save / Export", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
+
+    def _build_playbook_tab(self, parent):
+        top = self._panel(parent, "Current playbook")
+        top.columnconfigure(0, weight=1)
+        self.playbook_title_var = tk.StringVar()
+        self.playbook_meta_var = tk.StringVar()
+        ttk.Label(top, textvariable=self.playbook_title_var, font=("Segoe UI", 13, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        ttk.Label(top, textvariable=self.playbook_meta_var, style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Button(top, text="Use When", command=lambda: self.show_list_popup("Use When", self.current_playbook().get("use_when", []))).grid(row=0, column=1, padx=5, pady=8)
+        ttk.Button(top, text="Pause When", command=lambda: self.show_list_popup("Avoid / Pause When", self.current_playbook().get("avoid_when", []))).grid(row=0, column=2, padx=5, pady=8)
+
+        nav = self._panel(parent, "Steps")
+        nav.columnconfigure(0, weight=1)
+        self.steps_tree = ttk.Treeview(nav, columns=("status", "title"), show="headings", height=8)
+        self.steps_tree.heading("status", text="Done")
+        self.steps_tree.heading("title", text="Step")
+        self.steps_tree.column("status", width=70, stretch=False)
+        self.steps_tree.column("title", width=760)
+        self.steps_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.steps_tree.bind("<<TreeviewSelect>>", lambda _e: self.select_tree_step())
+        nav_buttons = ttk.Frame(nav)
+        nav_buttons.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(nav_buttons, text="Previous", command=self.previous_step).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Next", command=self.next_step).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Why?", command=lambda: self.show_step_panel("why")).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Tools", command=lambda: self.show_step_panel("tools")).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Artifacts", command=lambda: self.show_step_panel("artifacts")).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Cautions", command=lambda: self.show_step_panel("cautions")).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Document", command=lambda: self.show_step_panel("document")).pack(side="left", padx=(0, 8))
+
+        card = self._panel(parent, "Step card")
+        card.columnconfigure(0, weight=1)
+        self.step_header_var = tk.StringVar()
+        self.step_focus_var = tk.StringVar()
+        ttk.Label(card, textvariable=self.step_header_var, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        self.step_check_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(card, text="Mark as reviewed", variable=self.step_check_var, command=self.update_step_checked).grid(row=0, column=1, sticky="e", padx=10, pady=8)
+        ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(card, text="Step notes").grid(row=2, column=0, sticky="w", padx=10, pady=(2, 2))
+        self.step_notes_text = tk.Text(card, height=6)
+        self.step_notes_text.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        style_text_widget(self.step_notes_text, self.colors)
+        self.step_notes_text.bind("<FocusOut>", lambda _e: self.save_current_step_notes())
+        self.step_notes_text.bind("<KeyRelease>", lambda _e: self.mark_dirty_step_notes())
+
+        detail = self._panel(parent, "Explanation")
+        self.detail_text = tk.Text(detail, height=12)
+        self.detail_text.pack(fill="x", padx=10, pady=10)
+        style_text_widget(self.detail_text, self.colors)
+        self.detail_text.configure(state="disabled")
+
+    def _build_session_tab(self, parent):
+        case = self._panel(parent, "Session details")
+        case.columnconfigure(1, weight=1)
+        ttk.Label(case, text="Case Number").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.case_var = tk.StringVar()
+        ttk.Entry(case, textvariable=self.case_var).grid(row=0, column=1, sticky="ew", padx=10, pady=8)
+        ttk.Label(case, text="Examiner").grid(row=1, column=0, sticky="w", padx=10, pady=8)
+        self.examiner_var = tk.StringVar()
+        ttk.Entry(case, textvariable=self.examiner_var).grid(row=1, column=1, sticky="ew", padx=10, pady=8)
+        ttk.Button(case, text="Update Session", command=self.update_session_details).grid(row=0, column=2, rowspan=2, padx=10, pady=8)
+
+        notes = self._panel(parent, "Overall session notes")
+        self.session_notes_text = tk.Text(notes, height=8)
+        self.session_notes_text.pack(fill="x", padx=10, pady=10)
+        style_text_widget(self.session_notes_text, self.colors)
+
+        review = self._panel(parent, "Review / export")
+        self.review_text = tk.Text(review, height=12)
+        self.review_text.pack(fill="x", padx=10, pady=10)
+        style_text_widget(self.review_text, self.colors)
+        self.review_text.configure(state="disabled")
+        actions = ttk.Frame(review)
+        actions.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Review", command=self.refresh_review).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Export", style="Accent.TButton", command=self.export_session).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Export + Open", command=lambda: self.export_session(open_after=True)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Open Last", command=self.open_last_folder).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="New Session", command=self.new_session).pack(side="right", padx=(8, 0))
+
+    def _build_settings_tab(self, parent):
+        output = self._panel(parent, "Output")
+        output.columnconfigure(1, weight=1)
+        ttk.Label(output, text="ByteCase Output Root").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.output_root_var = tk.StringVar(value=self.settings.get("output", {}).get("output_root", ""))
+        ttk.Entry(output, textvariable=self.output_root_var).grid(row=0, column=1, sticky="ew", padx=10, pady=8)
+        ttk.Button(output, text="Browse", command=self.browse_output_root).grid(row=0, column=2, padx=10, pady=8)
+        ttk.Label(output, text=f"Leave blank to use {DEFAULT_OUTPUT_ROOT}", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        self.export_txt_var = tk.BooleanVar(value=self.settings.get("output", {}).get("export_txt", True))
+        self.export_docx_var = tk.BooleanVar(value=self.settings.get("output", {}).get("export_docx", True))
+        ttk.Checkbutton(output, text="Export TXT", variable=self.export_txt_var).grid(row=2, column=1, sticky="w", padx=10, pady=4)
+        ttk.Checkbutton(output, text="Export DOCX", variable=self.export_docx_var).grid(row=3, column=1, sticky="w", padx=10, pady=4)
+
+        appearance = self._panel(parent, "Appearance")
+        ttk.Label(appearance, text="Theme").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.theme_var = tk.StringVar(value=self.settings.get("appearance", {}).get("theme", "system"))
+        ttk.Combobox(appearance, textvariable=self.theme_var, values=["system", "dark", "light"], state="readonly", width=20).grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        ttk.Button(parent, text="Save Settings", style="Accent.TButton", command=self.save_settings_action).pack(anchor="w", padx=10, pady=10)
+
+    def populate_playbook_list(self):
+        selected_category = self.category_var.get()
+        self.playbook_list.delete(0, tk.END)
+        for pb in PLAYBOOKS:
+            if selected_category == "All" or pb["category"] == selected_category:
+                self.playbook_list.insert(tk.END, pb["title"])
+        if self.playbook_list.size() > 0:
+            self.playbook_list.selection_set(0)
+            self.preview_selected_playbook()
+
+    def selected_playbook_from_list(self):
+        selection = self.playbook_list.curselection()
+        if not selection:
+            return None
+        title = self.playbook_list.get(selection[0])
+        for pb in PLAYBOOKS:
+            if pb["title"] == title:
+                return pb
+        return None
+
+    def preview_selected_playbook(self):
+        pb = self.selected_playbook_from_list()
+        if not pb:
+            return
+        text = [pb["title"], f"Category: {pb['category']}", f"Level: {pb['level']}", "", pb["summary"], "", "Use when:"]
+        text.extend(f"- {item}" for item in pb.get("use_when", []))
+        text.append("")
+        text.append("Pause when:")
+        text.extend(f"- {item}" for item in pb.get("avoid_when", []))
+        text.append("")
+        text.append(f"Steps: {len(pb.get('steps', []))}")
+        self.set_text(self.preview_text, "\n".join(text))
+
+    def open_selected_playbook(self):
+        pb = self.selected_playbook_from_list()
+        if not pb:
+            messagebox.showwarning("No playbook selected", "Select a playbook first.")
+            return
+        self.save_current_step_notes()
+        self.session = create_session(pb["id"], self.mode_var.get())
+        self.current_step_index = 1
+        self.refresh_all()
+        self.notebook.select(self.playbook_tab)
+
+    def quick_mode(self, mode):
+        self.mode_var.set(mode)
+        self.set_mode()
+        self.notebook.select(self.playbook_tab)
+
+    def set_mode(self):
+        self.session["mode"] = self.mode_var.get()
+        self.refresh_current_step()
+        self.refresh_start_summary()
+
+    def current_playbook(self):
+        return get_playbook(self.session.get("playbook_id")) or PLAYBOOKS[0]
+
+    def refresh_all(self):
+        self.mode_var.set(self.session.get("mode", "Field Reference"))
+        self.populate_playbook_list()
+        self.refresh_playbook_header()
+        self.refresh_steps_tree()
+        self.refresh_current_step()
+        self.case_var.set(self.session.get("case_number", ""))
+        self.examiner_var.set(self.session.get("examiner", ""))
+        self.set_text(self.session_notes_text, self.session.get("session_notes", ""), readonly=False)
+        self.refresh_start_summary()
+        self.refresh_review()
+
+    def refresh_playbook_header(self):
+        pb = self.current_playbook()
+        self.playbook_title_var.set(pb["title"])
+        self.playbook_meta_var.set(f"{pb['category']} | {pb['level']} | {len(pb.get('steps', []))} guidance steps | Mode: {self.session.get('mode')}")
+
+    def refresh_steps_tree(self):
+        for item in self.steps_tree.get_children():
+            self.steps_tree.delete(item)
+        for item in self.session.get("step_state", []):
+            status = "Yes" if item.get("checked") else ""
+            self.steps_tree.insert("", "end", iid=str(item["index"]), values=(status, f"{item['index']}. {item['title']}"))
+        if self.session.get("step_state"):
+            self.steps_tree.selection_set(str(self.current_step_index))
+            self.steps_tree.see(str(self.current_step_index))
+
+    def select_tree_step(self):
+        selection = self.steps_tree.selection()
+        if not selection:
+            return
+        self.save_current_step_notes()
+        self.current_step_index = int(selection[0])
+        self.refresh_current_step()
+
+    def get_step(self):
+        pb = self.current_playbook()
+        index = max(1, min(self.current_step_index, len(pb.get("steps", []))))
+        return pb["steps"][index - 1]
+
+    def get_step_state(self):
+        for item in self.session.get("step_state", []):
+            if item.get("index") == self.current_step_index:
+                return item
+        return {}
+
+    def refresh_current_step(self):
+        pb = self.current_playbook()
+        if not pb.get("steps"):
+            return
+        step = self.get_step()
+        state = self.get_step_state()
+        self.step_header_var.set(f"Step {self.current_step_index}: {step.get('title', '')}")
+        self.step_focus_var.set(step.get("field_focus", ""))
+        self.step_check_var.set(bool(state.get("checked")))
+        self.set_text(self.step_notes_text, state.get("notes", ""), readonly=False)
+        mode = self.session.get("mode", "Field Reference")
+        if mode == "Learning / Refresher":
+            detail = self.format_step_full(step)
+        else:
+            detail = self.format_step_field(step)
+        self.set_text(self.detail_text, detail)
+        self.refresh_playbook_header()
+
+    def format_step_field(self, step):
+        lines = ["Field Reference", "", step.get("field_focus", ""), "", "Why this order matters:", step.get("why", ""), "", "Document:"]
+        lines.extend(f"- {item}" for item in step.get("document", []))
+        lines.append("")
+        lines.append("Cautions:")
+        lines.extend(f"- {item}" for item in step.get("cautions", []))
+        return "\n".join(lines)
+
+    def format_step_full(self, step):
+        lines = ["Learning / Refresher", "", step.get("learning_detail", ""), "", "Why:", step.get("why", ""), "", "Possible tools:"]
+        lines.extend(f"- {item}" for item in step.get("tools", []))
+        lines.append("")
+        lines.append("Common artifacts / outputs:")
+        lines.extend(f"- {item}" for item in step.get("artifacts", []))
+        lines.append("")
+        lines.append("Cautions:")
+        lines.extend(f"- {item}" for item in step.get("cautions", []))
+        lines.append("")
+        lines.append("Document:")
+        lines.extend(f"- {item}" for item in step.get("document", []))
+        return "\n".join(lines)
+
+    def show_step_panel(self, key):
+        step = self.get_step()
+        title_map = {"why": "Why this matters", "tools": "Possible tools", "artifacts": "Common artifacts / outputs", "cautions": "Cautions", "document": "What to document"}
+        if key == "why":
+            body = step.get("why", "") + "\n\n" + step.get("learning_detail", "")
+        else:
+            body = "\n".join(f"- {item}" for item in step.get(key, []))
+        self.show_text_popup(title_map.get(key, key.title()), body)
+
+    def show_list_popup(self, title, values):
+        self.show_text_popup(title, "\n".join(f"- {item}" for item in values))
+
+    def show_boundary(self):
+        self.show_text_popup("Boundary Notice", PLAYBOOK_BOUNDARY)
+
+    def show_text_popup(self, title, body):
+        win = tk.Toplevel(self.root)
+        configure_toplevel(win, self.colors)
+        win.title(title)
+        win.geometry("720x480")
+        ttk.Label(win, text=title, font=("Segoe UI", 13, "bold")).pack(anchor="w", padx=12, pady=(12, 4))
+        text = tk.Text(win, height=20)
+        text.pack(fill="both", expand=True, padx=12, pady=8)
+        style_text_widget(text, self.colors)
+        text.insert("1.0", body)
+        text.configure(state="disabled")
+        ttk.Button(win, text="Close", command=win.destroy).pack(anchor="e", padx=12, pady=(0, 12))
+
+    def update_step_checked(self):
+        state = self.get_step_state()
+        state["checked"] = self.step_check_var.get()
+        self.refresh_steps_tree()
+        self.refresh_start_summary()
+
+    def mark_dirty_step_notes(self):
+        pass
+
+    def save_current_step_notes(self):
+        try:
+            state = self.get_step_state()
+            if state is not None:
+                state["notes"] = self.step_notes_text.get("1.0", "end-1c")
+        except tk.TclError:
+            pass
+
+    def previous_step(self):
+        self.save_current_step_notes()
+        self.current_step_index = max(1, self.current_step_index - 1)
+        self.refresh_steps_tree()
+        self.refresh_current_step()
+
+    def next_step(self):
+        self.save_current_step_notes()
+        max_step = len(self.session.get("step_state", []))
+        self.current_step_index = min(max_step, self.current_step_index + 1)
+        self.refresh_steps_tree()
+        self.refresh_current_step()
+
+    def update_session_details(self):
+        self.session["case_number"] = self.case_var.get().strip()
+        self.session["examiner"] = self.examiner_var.get().strip()
+        self.session["session_notes"] = self.session_notes_text.get("1.0", "end-1c")
+        self.refresh_start_summary()
+        self.refresh_review()
+        messagebox.showinfo("Session updated", "Session details updated.")
+
+    def refresh_start_summary(self):
+        summary = session_summary(self.session)
+        self.start_summary_var.set(
+            f"Current: {summary['playbook_title']} | Mode: {summary['mode']} | Reviewed: {summary['checked_steps']} of {summary['total_steps']} | Steps with notes: {summary['steps_with_notes']}"
+        )
+
+    def refresh_review(self):
+        self.save_current_step_notes()
+        self.session["case_number"] = self.case_var.get().strip() if hasattr(self, "case_var") else self.session.get("case_number", "")
+        self.session["examiner"] = self.examiner_var.get().strip() if hasattr(self, "examiner_var") else self.session.get("examiner", "")
+        if hasattr(self, "session_notes_text"):
+            self.session["session_notes"] = self.session_notes_text.get("1.0", "end-1c")
+        summary = session_summary(self.session)
+        warnings = validate_session(self.session)
+        lines = [
+            f"Playbook: {summary['playbook_title']}",
+            f"Mode: {summary['mode']}",
+            f"Case Number: {self.session.get('case_number', '') or 'NO_CASE'}",
+            f"Examiner: {self.session.get('examiner', '')}",
+            f"Reviewed Steps: {summary['checked_steps']} of {summary['total_steps']}",
+            f"Steps With Notes: {summary['steps_with_notes']}",
+            "",
+            "Warnings:" if warnings else "Warnings: None",
+        ]
+        lines.extend(f"- {warning}" for warning in warnings)
+        lines.append("")
+        lines.append(f"Output Root: {get_output_root(self.settings)}")
+        self.set_text(self.review_text, "\n".join(lines))
+
+    def export_session(self, open_after=False):
+        self.refresh_review()
+        try:
+            json_path, txt_path, docx_path = save_session_outputs(self.settings, self.session)
+        except Exception as exc:
+            messagebox.showerror("Export failed", str(exc))
+            return
+        self.last_export_folder = json_path.parent
+        created = [str(json_path), str(txt_path)]
+        if docx_path:
+            created.append(str(docx_path))
+        messagebox.showinfo("Export complete", "Created:\n" + "\n".join(created))
+        if open_after:
+            self.open_folder(self.last_export_folder)
+
+    def open_last_folder(self):
+        if self.last_export_folder and Path(self.last_export_folder).exists():
+            self.open_folder(self.last_export_folder)
+        else:
+            messagebox.showinfo("No folder yet", "Export a session first.")
+
+    def open_folder(self, path):
+        path = str(path)
+        if sys.platform.startswith("win"):
+            os.startfile(path)  # type: ignore[attr-defined]
+        elif sys.platform == "darwin":
+            subprocess.run(["open", path], check=False)
+        else:
+            subprocess.run(["xdg-open", path], check=False)
+
+    def open_session_json(self):
+        path = filedialog.askopenfilename(title="Open ByteCase Playbooks session JSON", filetypes=[("JSON files", "*.json"), ("All files", "*.*")])
+        if not path:
+            return
+        try:
+            self.session = load_session(path)
+            self.current_step_index = 1
+            self.refresh_all()
+            self.notebook.select(self.playbook_tab)
+        except Exception as exc:
+            messagebox.showerror("Could not open session", str(exc))
+
+    def new_session(self):
+        pb = self.current_playbook()
+        if not messagebox.askyesno("New session", "Start a new session with the current playbook?"):
+            return
+        self.session = create_session(pb["id"], self.mode_var.get())
+        self.current_step_index = 1
+        self.refresh_all()
+
+    def browse_output_root(self):
+        folder = filedialog.askdirectory(title="Select ByteCase output root")
+        if folder:
+            self.output_root_var.set(folder)
+
+    def save_settings_action(self):
+        self.settings.setdefault("output", {})["output_root"] = self.output_root_var.get().strip()
+        self.settings["output"]["export_txt"] = self.export_txt_var.get()
+        self.settings["output"]["export_docx"] = self.export_docx_var.get()
+        self.settings.setdefault("appearance", {})["theme"] = self.theme_var.get()
+        self.settings.setdefault("defaults", {})["mode"] = self.mode_var.get()
+        save_settings(self.settings)
+        self.colors = apply_theme(self.root, self.settings)
+        messagebox.showinfo("Settings saved", "Settings saved. Restart the app if any visual element does not refresh immediately.")
+
+    def set_text(self, widget, text, readonly=True):
+        widget.configure(state="normal")
+        widget.delete("1.0", tk.END)
+        widget.insert("1.0", text or "")
+        if readonly:
+            widget.configure(state="disabled")
+
