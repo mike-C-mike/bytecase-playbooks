@@ -18,6 +18,7 @@ from playbook_data import (
     ARTIFACT_AREAS,
     INVESTIGATIVE_QUESTIONS,
     CONTROL_CONTEXT_PROMPTS,
+    SCENARIO_CARDS,
     DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
@@ -27,6 +28,7 @@ from playbook_data import (
     search_playbooks,
     search_artifact_areas,
     search_investigative_questions,
+    search_scenario_cards,
 )
 from session_core import create_session, load_session, save_session_outputs, session_summary
 from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
@@ -105,6 +107,7 @@ class PlaybooksApp:
         self.decision_tab = ScrollableFrame(self.notebook, self.colors)
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
         self.artifact_tab = ScrollableFrame(self.notebook, self.colors)
+        self.scenario_tab = ScrollableFrame(self.notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
@@ -113,6 +116,7 @@ class PlaybooksApp:
         self.notebook.add(self.playbook_tab, text="Playbook")
         self.notebook.add(self.session_tab, text="Progress / Export")
         self.notebook.add(self.artifact_tab, text="Artifact Areas")
+        self.notebook.add(self.scenario_tab, text="Scenario Coach")
         self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
@@ -121,6 +125,7 @@ class PlaybooksApp:
         self._build_playbook_tab(self.playbook_tab.frame)
         self._build_session_tab(self.session_tab.frame)
         self._build_artifact_tab(self.artifact_tab.frame)
+        self._build_scenario_tab(self.scenario_tab.frame)
         self._build_reference_tab(self.reference_tab.frame)
         self._build_settings_tab(self.settings_tab.frame)
 
@@ -176,6 +181,7 @@ class PlaybooksApp:
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Artifact Areas", command=lambda: self.notebook.select(self.artifact_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Scenario Coach", command=lambda: self.notebook.select(self.scenario_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
@@ -389,6 +395,52 @@ class PlaybooksApp:
         self.populate_artifact_area_list()
         self.show_question_detail()
 
+    def _build_scenario_tab(self, parent):
+        intro = self._panel(parent, "Scenario Coach")
+        ttk.Label(
+            intro,
+            text=(
+                "Use this section when an examiner has a common investigative question and needs help thinking through "
+                "what an artifact may show, what extra context may matter, and what not to overclaim."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+        ttk.Label(
+            intro,
+            text="This is a reference and learning aid. It does not identify a person, make a finding, or replace interviews, corroboration, policy, or examiner judgment.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).pack(anchor="w", padx=10, pady=(0, 8))
+
+        body = self._panel(parent, "Common scenarios")
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=2)
+        body.rowconfigure(0, weight=1)
+        self.scenario_list = tk.Listbox(body, height=12, exportselection=False)
+        self.scenario_list.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.scenario_list.bind("<<ListboxSelect>>", lambda _e: self.show_scenario_detail())
+        self.scenario_detail_text = tk.Text(body, height=22)
+        self.scenario_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        style_text_widget(self.scenario_detail_text, self.colors)
+        self.scenario_detail_text.configure(state="disabled")
+        actions = ttk.Frame(body)
+        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Copy Guidance", command=self.copy_scenario_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Open Related Playbook", command=self.open_scenario_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search Terms", command=self.search_scenario_terms).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Use / Access Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
+
+        mindset = self._panel(parent, "Core mindset")
+        ttk.Label(
+            mindset,
+            text=(
+                "Separate the artifact from the actor. First describe what the data source supports. Then identify what other context may support access, control, possession, session activity, admission, or corroboration. "
+                "Avoid turning a tool result into a human-action conclusion unless the supporting context is documented."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=10)
+        self.populate_scenario_list()
+
     def _build_reference_tab(self, parent):
         search_panel = self._panel(parent, "Search playbooks and glossary")
         search_panel.columnconfigure(1, weight=1)
@@ -399,7 +451,7 @@ class PlaybooksApp:
         entry.bind("<Return>", lambda _e: self.run_reference_search())
         ttk.Button(search_panel, text="Search", style="Accent.TButton", command=self.run_reference_search).grid(row=0, column=2, padx=10, pady=8)
         ttk.Button(search_panel, text="Clear", command=self.clear_reference_search).grid(row=0, column=3, padx=10, pady=8)
-        ttk.Label(search_panel, text="Search examples: RAM, hash, write blocker, browser, Volatility, live acquisition", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(search_panel, text="Search examples: RAM, hash, write blocker, browser, Volatility, USB, password, actor, command, attribution", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
 
         body = self._panel(parent, "Reference results")
         body.columnconfigure(0, weight=1)
@@ -1011,12 +1063,14 @@ class PlaybooksApp:
             self.reference_results.append({"type": "Artifact", "title": area.get("title", ""), "data": area})
         for question in search_investigative_questions(query):
             self.reference_results.append({"type": "Question", "title": question.get("question", ""), "data": question})
+        for scenario in search_scenario_cards(query):
+            self.reference_results.append({"type": "Scenario", "title": scenario.get("title", ""), "data": scenario})
         self.populate_reference_tree()
         if self.reference_results:
             self.reference_tree.selection_set("0")
             self.show_reference_result()
         else:
-            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, USB, command, password, control, attribution, or artifact.")
+            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, USB, command, password, control, actor, attribution, scenario, or artifact.")
 
     def clear_reference_search(self):
         self.reference_query_var.set("")
@@ -1071,7 +1125,7 @@ class PlaybooksApp:
     def open_reference_playbook(self):
         result = self.selected_reference_result()
         if not result or result.get("type") != "Playbook":
-            messagebox.showinfo("No playbook selected", "Select a Playbook result first. Artifact and Question results are reference-only.")
+            messagebox.showinfo("No playbook selected", "Select a Playbook result first. Artifact, Question, and Scenario results are reference-only here.")
             return
         playbook = result.get("data", {})
         self.save_current_step_notes()
@@ -1080,6 +1134,89 @@ class PlaybooksApp:
         self.sync_current_step_index()
         self.refresh_all()
         self.notebook.select(self.playbook_tab)
+
+    def populate_scenario_list(self):
+        if not hasattr(self, "scenario_list"):
+            return
+        self.scenario_list.delete(0, tk.END)
+        for item in SCENARIO_CARDS:
+            self.scenario_list.insert(tk.END, f"{item.get('category', '')} - {item.get('title', '')}")
+        if SCENARIO_CARDS:
+            self.scenario_list.selection_set(0)
+            self.show_scenario_detail()
+
+    def selected_scenario(self):
+        if not hasattr(self, "scenario_list"):
+            return None
+        selection = self.scenario_list.curselection()
+        if not selection:
+            return None
+        try:
+            return SCENARIO_CARDS[selection[0]]
+        except (IndexError, TypeError):
+            return None
+
+    def format_scenario_guidance(self, item):
+        if not item:
+            return "No scenario selected."
+        lines = [
+            item.get("title", ""),
+            f"Category: {item.get('category', '')}",
+            "",
+            "Situation:",
+            item.get("situation", ""),
+            "",
+            "How to think about it:",
+        ]
+        lines.extend(f"- {value}" for value in item.get("what_to_think", []))
+        lines.append("")
+        lines.append("Helpful supporting context:")
+        lines.extend(f"- {value}" for value in item.get("supporting_context", []))
+        lines.append("")
+        lines.append("Guardrails / does not prove:")
+        lines.extend(f"- {value}" for value in item.get("guardrails", []))
+        lines.append("")
+        lines.append("Plain-language takeaway:")
+        lines.append(item.get("plain_language", ""))
+        lines.append("")
+        lines.append("Related playbook:")
+        lines.append(f"- {item.get('related_playbook_title', '')}")
+        lines.append("")
+        lines.append("Reference terms:")
+        lines.extend(f"- {value}" for value in item.get("related_reference_terms", []))
+        return "\n".join(lines)
+
+    def show_scenario_detail(self):
+        if hasattr(self, "scenario_detail_text"):
+            self.set_text(self.scenario_detail_text, self.format_scenario_guidance(self.selected_scenario()))
+
+    def copy_scenario_guidance(self):
+        self.copy_to_clipboard(self.format_scenario_guidance(self.selected_scenario()), "Scenario guidance")
+
+    def open_scenario_playbook(self):
+        scenario = self.selected_scenario()
+        if not scenario:
+            return
+        playbook_id = scenario.get("related_playbook_id", "")
+        try:
+            self.save_current_step_notes()
+            self.session = create_session(playbook_id, self.mode_var.get())
+            self.current_step_index = 1
+            self.sync_current_step_index()
+            self.refresh_all()
+            self.notebook.select(self.playbook_tab)
+        except Exception as exc:
+            messagebox.showerror("Could not open playbook", str(exc))
+
+    def search_scenario_terms(self):
+        scenario = self.selected_scenario()
+        if not scenario:
+            return
+        terms = scenario.get("related_reference_terms", [])
+        query = terms[0] if terms else scenario.get("title", "")
+        self.reference_query_var.set(query)
+        self.notebook.select(self.reference_tab)
+        self.run_reference_search()
 
     def selected_decision_path(self):
         label = self.decision_path_var.get() if hasattr(self, "decision_path_var") else ""

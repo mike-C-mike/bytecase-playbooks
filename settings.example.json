@@ -1,7 +1,7 @@
 {
   "app": {
     "name": "ByteCase Playbooks",
-    "version": "0.3.0"
+    "version": "0.7.0"
   },
   "appearance": {
     "theme": "system"

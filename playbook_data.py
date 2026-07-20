@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.6.0"
+APP_VERSION = "0.7.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -614,6 +614,134 @@ def search_investigative_questions(query):
     for item in INVESTIGATIVE_QUESTIONS:
         haystack_parts = [item.get("question", ""), item.get("mindset", "")]
         for key in ("look_at", "guardrails", "related_artifacts"):
+            haystack_parts.extend(item.get(key, []))
+        if needle in "\n".join(str(part) for part in haystack_parts).lower():
+            results.append(item)
+    return results
+
+
+SCENARIO_CARDS = [
+    {
+        "id": "command_seen_on_device",
+        "title": "Command or tool activity appears on a device",
+        "category": "Use / Access Context",
+        "situation": "A command, script, executable, or tool artifact appears in process, shell, event, memory, or application history and someone wants to know who ran it.",
+        "what_to_think": [
+            "First separate the technical activity from the human actor.",
+            "Ask what the artifact actually shows: execution, possible execution, history, presence, or a parser interpretation.",
+            "Then look for user/session/control context that may support who had access at the relevant time.",
+        ],
+        "supporting_context": [
+            "Logged-in user and active session context",
+            "Local account, domain account, or cloud account association",
+            "Possession or custody of the device at the relevant time",
+            "Admission about device use, account use, or exclusive password/PIN knowledge",
+            "Remote access indicators, scheduled tasks, scripts, malware, or automation review",
+            "Corroborating timestamps from logs, files, memory, browser, messaging, or external records",
+        ],
+        "guardrails": [
+            "A command appearing on a device does not prove which person typed or initiated it.",
+            "A named account does not automatically prove the account holder was physically present.",
+            "Shared credentials, remote access, automation, malware, and scheduled tasks can affect interpretation.",
+            "An admission of exclusive password knowledge can support device control context, but should be documented precisely and weighed with the rest of the evidence.",
+        ],
+        "plain_language": "The artifact can support that activity occurred on the system. Connecting that activity to a person usually requires additional access, account, possession, timing, or admission context.",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "related_playbook_title": "Windows Artifact Review Refresher",
+        "related_reference_terms": ["Actor vs. artifact", "Device-use context", "Overclaim", "Corroboration"],
+    },
+    {
+        "id": "downloaded_file_question",
+        "title": "Downloaded file needs interpretation",
+        "category": "Browser / File Activity",
+        "situation": "A download record, file path, browser artifact, or recovered file suggests something was downloaded and the examiner needs to explain what can and cannot be said.",
+        "what_to_think": [
+            "Separate download evidence from file-open evidence.",
+            "Review browser download records, file system metadata, recent-file artifacts, shortcut artifacts, and application history when available.",
+            "Consider whether sync, preview, cache, automated download, or another user/session could explain the artifact.",
+        ],
+        "supporting_context": [
+            "Browser download database and source URL",
+            "File path, MAC times, Zone.Identifier, and file metadata",
+            "LNK, Jump List, MRU, recent files, or application-specific open history",
+            "User profile and browser account context",
+            "Corroborating messages, searches, or external records",
+        ],
+        "guardrails": [
+            "A download record does not prove the file was opened or understood.",
+            "A file existing on a device does not prove knowledge by a specific person.",
+            "Browser sync, redirects, cached content, and automated activity can complicate interpretation.",
+        ],
+        "plain_language": "A download artifact may support that a browser or process obtained a file. Stronger claims about viewing, knowledge, intent, or actor identity require additional context.",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "related_playbook_title": "Windows Artifact Review Refresher",
+        "related_reference_terms": ["Browser activity", "File access", "Corroboration", "Does not prove"],
+    },
+    {
+        "id": "usb_connected_question",
+        "title": "USB or external media connection question",
+        "category": "External Media",
+        "situation": "Artifacts suggest a USB drive or external device connected to a computer and the examiner needs to understand what that supports.",
+        "what_to_think": [
+            "Identify the device and connection history first.",
+            "Then ask whether any file access, copy, shortcut, shell, or application artifacts connect that device to relevant activity.",
+            "Finally evaluate user/session/control context around the connection time.",
+        ],
+        "supporting_context": [
+            "USBSTOR, MountedDevices, device class, volume serial, and SetupAPI context",
+            "Event logs or device install timestamps",
+            "LNK/Jump List references to removable paths",
+            "File copy, recent file, or application activity related to removable media",
+            "User logon/session evidence around connection times",
+        ],
+        "guardrails": [
+            "USB connection does not prove file transfer.",
+            "USB connection does not prove who connected the device.",
+            "Timestamp interpretation can be complicated by install time, first connection, last connection, time zones, and parser behavior.",
+        ],
+        "plain_language": "USB artifacts can help show that a device was connected or recognized. Showing transfer, access, or actor identity usually requires additional artifacts and context.",
+        "related_playbook_id": "external_media_hash_copy_refresher",
+        "related_playbook_title": "External Media Hash / Copy Refresher",
+        "related_reference_terms": ["USB", "External media", "File access", "Device-use context"],
+    },
+    {
+        "id": "mobile_message_actor",
+        "title": "Mobile message or app activity needs actor context",
+        "category": "Mobile",
+        "situation": "A mobile extraction shows messages, app activity, media, or account artifacts and someone wants to know who physically used the device or account.",
+        "what_to_think": [
+            "Start with what the extraction and parsed artifact show.",
+            "Review account/device ownership, lock state, passcode context, message thread context, app account context, and possession/control indicators.",
+            "Be careful when moving from device/account activity to a specific human actor.",
+        ],
+        "supporting_context": [
+            "Device identifiers, phone number, account names, SIM/eSIM, and cloud account association",
+            "Lock state, passcode/PIN/biometric context, and admissions about password knowledge",
+            "Possession/custody, witness, camera, location, or communication context",
+            "Message content, timing, writing style, attachments, contact names, and surrounding conversation",
+            "Tool limitations, unsupported apps, deleted/recovered status, and time zone handling",
+        ],
+        "guardrails": [
+            "A message or app artifact does not automatically prove who held the phone at that moment.",
+            "An account name or contact label may be user-entered, synced, stale, or misleading.",
+            "Deleted or recovered artifacts need careful explanation of source, status, and tool interpretation.",
+        ],
+        "plain_language": "Mobile artifacts can show activity tied to a device, account, app, or extraction source. Human attribution should be supported by possession, access, account, admission, timing, and corroborating context.",
+        "related_playbook_id": "mobile_device_extraction",
+        "related_playbook_title": "Mobile Device Extraction Refresher",
+        "related_reference_terms": ["Mobile", "Device-use context", "Actor vs. artifact", "Limitations"],
+    },
+]
+
+
+def search_scenario_cards(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for item in SCENARIO_CARDS:
+        haystack_parts = [item.get("title", ""), item.get("category", ""), item.get("situation", ""), item.get("plain_language", ""), item.get("related_playbook_title", "")]
+        for key in ("what_to_think", "supporting_context", "guardrails", "related_reference_terms"):
             haystack_parts.extend(item.get(key, []))
         if needle in "\n".join(str(part) for part in haystack_parts).lower():
             results.append(item)

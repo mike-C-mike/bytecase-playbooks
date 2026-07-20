@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.6.0
+v0.7.0
 
 ## Purpose
 
@@ -44,20 +44,19 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.6.0 updates
+## v0.7.0 updates
 
-v0.6.0 adds an artifact-area navigator, question-driven guidance, and stronger use/access attribution guardrails.
+v0.7.0 adds a **Scenario Coach** layer for common interpretation questions where newer or occasional examiners need help separating technical artifacts from stronger human-action claims.
 
 Changes include:
 
-- Added **Artifact Areas** tab
-- Added artifact guidance for Windows execution, file access, USB devices, browser activity, memory context, and mobile activity
-- Added **What are you trying to understand?** helper
-- Added question guidance for device control, file access, command execution, USB connection, and browser/download activity
-- Added **Use / Access Context** guardrail guidance
-- Added reminders that device artifacts, commands, logins, and file activity do not automatically identify the human actor
-- Added search coverage for artifact areas and investigative questions
-- Added glossary entries for Device-use context and Actor vs. artifact
+- Added **Scenario Coach** tab
+- Added scenario cards for command/tool activity, downloads, USB/external media, and mobile message/app actor context
+- Added scenario guidance for how to think through the issue, what supporting context may help, and what not to overclaim
+- Added related playbook shortcuts from scenario cards
+- Added related reference search shortcuts from scenario cards
+- Expanded reference search to include scenario cards
+- Preserved Playbooks as a reference/refresher tool, not a case notes or case workflow module
 
 ## Attribution / use-context mindset
 
@@ -148,10 +147,11 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Add Playbooks artifact navigator and use-context guardrails
+Add Playbooks scenario coach guidance
 ```
 
 ## Recommended commit description
 
 ```text
-Adds an Artifact Areas tab, question-driven artifact guidance, and use/access context guardrails to ByteCase Playbooks. The new guidance helps examiners understand common artifact areas, what questions those artifacts may support, what tools may apply, and what not to overclaim, including reminders that device activity, commands, logins, and file access do not automatically identify the human actor without supporting context.
+Adds a Scenario Coach tab with common interpretation scenarios for command/tool activity, downloads, USB/external media, and mobile message/app actor context. Scenario cards explain how to think through the issue, what supporting context may help, what not to overclaim, and which related playbook or reference terms may help.
+```
