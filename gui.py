@@ -15,6 +15,9 @@ from playbook_data import (
     APP_SUBTITLE,
     APP_VERSION,
     GLOSSARY,
+    ARTIFACT_AREAS,
+    INVESTIGATIVE_QUESTIONS,
+    CONTROL_CONTEXT_PROMPTS,
     DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
@@ -22,6 +25,8 @@ from playbook_data import (
     get_playbook,
     search_glossary,
     search_playbooks,
+    search_artifact_areas,
+    search_investigative_questions,
 )
 from session_core import create_session, load_session, save_session_outputs, session_summary
 from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
@@ -99,6 +104,7 @@ class PlaybooksApp:
         self.playbook_tab = ScrollableFrame(self.notebook, self.colors)
         self.decision_tab = ScrollableFrame(self.notebook, self.colors)
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
+        self.artifact_tab = ScrollableFrame(self.notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
@@ -106,6 +112,7 @@ class PlaybooksApp:
         self.notebook.add(self.decision_tab, text="Guide Me")
         self.notebook.add(self.playbook_tab, text="Playbook")
         self.notebook.add(self.session_tab, text="Progress / Export")
+        self.notebook.add(self.artifact_tab, text="Artifact Areas")
         self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
@@ -113,6 +120,7 @@ class PlaybooksApp:
         self._build_decision_tab(self.decision_tab.frame)
         self._build_playbook_tab(self.playbook_tab.frame)
         self._build_session_tab(self.session_tab.frame)
+        self._build_artifact_tab(self.artifact_tab.frame)
         self._build_reference_tab(self.reference_tab.frame)
         self._build_settings_tab(self.settings_tab.frame)
 
@@ -167,6 +175,7 @@ class PlaybooksApp:
         ttk.Button(actions, text="Guide Me", command=lambda: self.notebook.select(self.decision_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Artifact Areas", command=lambda: self.notebook.select(self.artifact_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
@@ -250,6 +259,7 @@ class PlaybooksApp:
         ttk.Button(nav_buttons, text="Document", command=lambda: self.show_step_panel("document")).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Commands", command=self.show_command_examples).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Does Not Prove", command=self.show_does_not_prove).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Use Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
 
         card = self._panel(parent, "Step card")
         card.columnconfigure(0, weight=1)
@@ -318,6 +328,66 @@ class PlaybooksApp:
         ttk.Button(actions, text="Save + Open", command=lambda: self.export_session(open_after=True)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open Last", command=self.open_last_folder).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="New Session", command=self.new_session).pack(side="right", padx=(8, 0))
+
+    def _build_artifact_tab(self, parent):
+        intro = self._panel(parent, "Artifact Area Navigator")
+        ttk.Label(
+            intro,
+            text=(
+                "Use this section when you know the question or artifact family and need a fast refresher. "
+                "It explains what an area may help answer, where to look, tools that may apply, and what not to overclaim."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+        ttk.Label(
+            intro,
+            text="This is reference guidance only. It does not identify a suspect, perform analysis, or replace corroboration and examiner judgment.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).pack(anchor="w", padx=10, pady=(0, 8))
+
+        chooser = self._panel(parent, "Artifact areas")
+        chooser.columnconfigure(0, weight=1)
+        chooser.columnconfigure(1, weight=2)
+        self.artifact_category_var = tk.StringVar(value="All")
+        categories = ["All"] + sorted({item.get("category", "") for item in ARTIFACT_AREAS})
+        self.artifact_category_box = ttk.Combobox(chooser, textvariable=self.artifact_category_var, values=categories, state="readonly", width=24)
+        self.artifact_category_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.artifact_category_box.bind("<<ComboboxSelected>>", lambda _e: self.populate_artifact_area_list())
+        self.artifact_area_list = tk.Listbox(chooser, height=8, exportselection=False)
+        self.artifact_area_list.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.artifact_area_list.bind("<<ListboxSelect>>", lambda _e: self.show_artifact_area_detail())
+        chooser.rowconfigure(0, weight=1)
+
+        detail = self._panel(parent, "Artifact guidance")
+        self.artifact_detail_text = tk.Text(detail, height=18)
+        self.artifact_detail_text.pack(fill="both", expand=True, padx=10, pady=10)
+        style_text_widget(self.artifact_detail_text, self.colors)
+        self.artifact_detail_text.configure(state="disabled")
+        actions = ttk.Frame(detail)
+        actions.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Copy Guidance", command=self.copy_artifact_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search This", command=self.search_selected_artifact_area).pack(side="left", padx=(0, 8))
+
+        helper = self._panel(parent, "What are you trying to understand?")
+        helper.columnconfigure(0, weight=1)
+        helper.columnconfigure(1, weight=2)
+        self.question_var = tk.StringVar(value=INVESTIGATIVE_QUESTIONS[0]["question"] if INVESTIGATIVE_QUESTIONS else "")
+        self.question_box = ttk.Combobox(helper, textvariable=self.question_var, values=[item["question"] for item in INVESTIGATIVE_QUESTIONS], state="readonly")
+        self.question_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.question_box.bind("<<ComboboxSelected>>", lambda _e: self.show_question_detail())
+        self.question_detail_text = tk.Text(helper, height=16)
+        self.question_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        style_text_widget(self.question_detail_text, self.colors)
+        self.question_detail_text.configure(state="disabled")
+        helper.rowconfigure(0, weight=1)
+        q_actions = ttk.Frame(helper)
+        q_actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(q_actions, text="Copy Question Guidance", command=self.copy_question_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(q_actions, text="Use / Access Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
+
+        self.populate_artifact_area_list()
+        self.show_question_detail()
 
     def _build_reference_tab(self, parent):
         search_panel = self._panel(parent, "Search playbooks and glossary")
@@ -812,6 +882,124 @@ class PlaybooksApp:
         self.sync_current_step_index()
         self.refresh_all()
 
+    def populate_artifact_area_list(self):
+        if not hasattr(self, "artifact_area_list"):
+            return
+        self.artifact_area_list.delete(0, tk.END)
+        selected = self.artifact_category_var.get()
+        self.visible_artifact_areas = [item for item in ARTIFACT_AREAS if selected == "All" or item.get("category") == selected]
+        for item in self.visible_artifact_areas:
+            self.artifact_area_list.insert(tk.END, f"{item.get('category', '')} - {item.get('title', '')}")
+        if self.visible_artifact_areas:
+            self.artifact_area_list.selection_set(0)
+            self.show_artifact_area_detail()
+
+    def selected_artifact_area(self):
+        if not hasattr(self, "artifact_area_list"):
+            return None
+        selection = self.artifact_area_list.curselection()
+        if not selection:
+            return None
+        try:
+            return self.visible_artifact_areas[selection[0]]
+        except (AttributeError, IndexError):
+            return None
+
+    def format_artifact_area(self, item):
+        if not item:
+            return "No artifact area selected."
+        lines = [
+            item.get("title", ""),
+            f"Category: {item.get('category', '')}",
+            "",
+            "What this may help answer:",
+            item.get("helps_answer", ""),
+            "",
+            "Where to look:",
+        ]
+        lines.extend(f"- {value}" for value in item.get("where_to_look", []))
+        lines.append("")
+        lines.append("Common tools / methods:")
+        lines.extend(f"- {value}" for value in item.get("tools", []))
+        lines.append("")
+        lines.append("Guardrails / does not prove:")
+        lines.extend(f"- {value}" for value in item.get("cautions", []))
+        lines.append("")
+        lines.append("Document:")
+        lines.extend(f"- {value}" for value in item.get("document", []))
+        lines.append("")
+        lines.append("Related playbooks:")
+        lines.extend(f"- {value}" for value in item.get("related_playbooks", []))
+        return "\n".join(lines)
+
+    def show_artifact_area_detail(self):
+        self.set_text(self.artifact_detail_text, self.format_artifact_area(self.selected_artifact_area()))
+
+    def copy_artifact_guidance(self):
+        self.copy_to_clipboard(self.format_artifact_area(self.selected_artifact_area()), "Artifact guidance")
+
+    def search_selected_artifact_area(self):
+        item = self.selected_artifact_area()
+        if not item:
+            return
+        self.reference_query_var.set(item.get("title", ""))
+        self.notebook.select(self.reference_tab)
+        self.run_reference_search()
+
+    def selected_question(self):
+        text = self.question_var.get() if hasattr(self, "question_var") else ""
+        for item in INVESTIGATIVE_QUESTIONS:
+            if item.get("question") == text:
+                return item
+        return INVESTIGATIVE_QUESTIONS[0] if INVESTIGATIVE_QUESTIONS else None
+
+    def format_question_guidance(self, item):
+        if not item:
+            return "No question selected."
+        lines = [
+            item.get("question", ""),
+            "",
+            "Mindset:",
+            item.get("mindset", ""),
+            "",
+            "Look at:",
+        ]
+        lines.extend(f"- {value}" for value in item.get("look_at", []))
+        lines.append("")
+        lines.append("Guardrails:")
+        lines.extend(f"- {value}" for value in item.get("guardrails", []))
+        lines.append("")
+        lines.append("Related artifact areas / playbooks:")
+        lines.extend(f"- {value}" for value in item.get("related_artifacts", []))
+        return "\n".join(lines)
+
+    def show_question_detail(self):
+        if hasattr(self, "question_detail_text"):
+            self.set_text(self.question_detail_text, self.format_question_guidance(self.selected_question()))
+
+    def copy_question_guidance(self):
+        self.copy_to_clipboard(self.format_question_guidance(self.selected_question()), "Question guidance")
+
+    def format_use_context_prompts(self):
+        lines = [
+            "Use / Access Context Mindset",
+            "",
+            "A device artifact can show activity, but it does not automatically identify the person who performed the action. When attribution matters, separate the artifact from the human actor and look for supporting context.",
+            "",
+        ]
+        for item in CONTROL_CONTEXT_PROMPTS:
+            lines.append(item.get("title", ""))
+            lines.append(item.get("prompt", ""))
+            lines.append("Examples:")
+            lines.extend(f"- {value}" for value in item.get("examples", []))
+            lines.append("Caution: " + item.get("caution", ""))
+            lines.append("")
+        lines.append("Practical reminder: admissions such as being the only person who knows a device password can support access/control context, but should still be documented accurately and weighed with possession, account, session, and corroborating evidence.")
+        return "\n".join(lines).strip()
+
+    def show_use_context(self):
+        self.show_text_popup("Use / Access Context", self.format_use_context_prompts())
+
     def run_reference_search(self):
         query = self.reference_query_var.get().strip()
         self.reference_results = []
@@ -819,12 +1007,16 @@ class PlaybooksApp:
             self.reference_results.append({"type": "Glossary", "title": item.get("term", ""), "data": item})
         for playbook in search_playbooks(query):
             self.reference_results.append({"type": "Playbook", "title": playbook.get("title", ""), "data": playbook})
+        for area in search_artifact_areas(query):
+            self.reference_results.append({"type": "Artifact", "title": area.get("title", ""), "data": area})
+        for question in search_investigative_questions(query):
+            self.reference_results.append({"type": "Question", "title": question.get("question", ""), "data": question})
         self.populate_reference_tree()
         if self.reference_results:
             self.reference_tree.selection_set("0")
             self.show_reference_result()
         else:
-            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, or artifact.")
+            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, USB, command, password, control, attribution, or artifact.")
 
     def clear_reference_search(self):
         self.reference_query_var.set("")
@@ -879,7 +1071,7 @@ class PlaybooksApp:
     def open_reference_playbook(self):
         result = self.selected_reference_result()
         if not result or result.get("type") != "Playbook":
-            messagebox.showinfo("No playbook selected", "Select a Playbook result first.")
+            messagebox.showinfo("No playbook selected", "Select a Playbook result first. Artifact and Question results are reference-only.")
             return
         playbook = result.get("data", {})
         self.save_current_step_notes()
@@ -963,4 +1155,3 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
-

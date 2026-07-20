@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.5.0
+v0.6.0
 
 ## Purpose
 
@@ -17,12 +17,12 @@ It helps answer questions such as:
 - What kind of workflow am I dealing with?
 - Why does this step matter?
 - Why does this step come before another step?
-- What should I document?
 - What artifact areas may commonly matter?
 - What tools may be used for this area?
+- What should I document?
 - What should I avoid overclaiming?
-- What sample command or tool action might apply?
 - What does this step not prove by itself?
+- What extra context may help connect device activity to a person?
 
 ## What ByteCase Playbooks is not
 
@@ -44,44 +44,38 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.5.0 updates
+## v0.6.0 updates
 
-v0.5.0 adds command/example guidance and stronger overclaim guardrails.
+v0.6.0 adds an artifact-area navigator, question-driven guidance, and stronger use/access attribution guardrails.
 
 Changes include:
 
-- Added **Commands** button on the Playbook screen
-- Added **Does Not Prove** button on the Playbook screen
-- Added **Copy Commands** quick action
-- Added command examples to RAM capture and Volatility-oriented memory-analysis steps
-- Added command/example details to Learning / Refresher mode when available
-- Added **Does Not Prove** reminders to relevant steps
-- Included command examples and overclaim guardrails in TXT/DOCX session exports
-- Added glossary entries for Command example and Does not prove
-- Expanded search to include command examples and does-not-prove guardrails
+- Added **Artifact Areas** tab
+- Added artifact guidance for Windows execution, file access, USB devices, browser activity, memory context, and mobile activity
+- Added **What are you trying to understand?** helper
+- Added question guidance for device control, file access, command execution, USB connection, and browser/download activity
+- Added **Use / Access Context** guardrail guidance
+- Added reminders that device artifacts, commands, logins, and file activity do not automatically identify the human actor
+- Added search coverage for artifact areas and investigative questions
+- Added glossary entries for Device-use context and Actor vs. artifact
 
-## Command examples
+## Attribution / use-context mindset
 
-Command examples are learning/reference prompts. They are not one-size-fits-all instructions.
-
-Users must adapt examples to their own:
-
-- Tool path
-- Filename
-- Image path
-- Case scope
-- Agency policy
-- Training
-- Validated local process
-- Operating environment
-
-For example, a Volatility command may appear as:
+ByteCase Playbooks intentionally separates:
 
 ```text
-vol.py -f memory.raw windows.pslist
+What the artifact shows
 ```
 
-The examiner must still confirm the correct tool installation, image filename, plugin availability, permissions, symbols, and output handling.
+from:
+
+```text
+Who performed the human action
+```
+
+For example, a command appearing on a device can support that the command existed or was executed in a certain environment, but it does not automatically prove which person typed or initiated it. The examiner should look for supporting context such as device possession, account/session information, password knowledge, admissions, remote-access indicators, cloud sync behavior, automation, malware, and corroborating physical or witness context when attribution matters.
+
+An admission such as being the only person who knows a device password can support access/control context, but it should still be documented accurately and weighed with the rest of the evidence.
 
 ## Main modes
 
@@ -117,6 +111,7 @@ Each step has quick explanation buttons:
 - Document
 - Commands
 - Does Not Prove
+- Use Context
 
 ## Output structure
 
@@ -153,11 +148,10 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Add Playbooks command guidance and overclaim guardrails
+Add Playbooks artifact navigator and use-context guardrails
 ```
 
 ## Recommended commit description
 
 ```text
-Adds command/example guidance and does-not-prove guardrails to ByteCase Playbooks. Includes Commands, Does Not Prove, and Copy Commands actions, adds Volatility-oriented memory-analysis command examples, expands reference search and glossary coverage, and includes command guidance in TXT/DOCX session exports while preserving Playbooks as a non-case reference/refresher tool.
-```
+Adds an Artifact Areas tab, question-driven artifact guidance, and use/access context guardrails to ByteCase Playbooks. The new guidance helps examiners understand common artifact areas, what questions those artifacts may support, what tools may apply, and what not to overclaim, including reminders that device activity, commands, logins, and file access do not automatically identify the human actor without supporting context.

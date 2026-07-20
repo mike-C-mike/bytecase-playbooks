@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.5.0"
+APP_VERSION = "0.6.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -458,6 +458,168 @@ PLAYBOOKS = [
 ]
 
 
+ARTIFACT_AREAS = [
+    {
+        "id": "windows_execution",
+        "category": "Windows",
+        "title": "Program execution indicators",
+        "helps_answer": "May help evaluate whether an application or executable appears to have run or been prepared to run on a Windows system.",
+        "where_to_look": ["Prefetch, when enabled and available", "Amcache/ShimCache-style program inventory artifacts", "UserAssist and related user activity artifacts", "Event logs", "LNK and Jump List context", "EDR or endpoint logs, if available"],
+        "tools": ["Autopsy", "KAPE", "Eric Zimmerman tools", "Registry Explorer", "Timeline Explorer", "Commercial forensic suites"],
+        "cautions": ["Execution indicators do not prove who personally ran the program.", "Some artifacts show presence, inventory, or interaction rather than confirmed execution.", "Time zone, system clock, parser support, and artifact meaning must be checked."],
+        "document": ["Artifact source and path", "Tool/parser/version", "Timestamp meaning", "Associated user profile if supported", "Corroborating sources", "Limitations"],
+        "related_playbooks": ["Windows Artifact Review Refresher"],
+    },
+    {
+        "id": "windows_file_access",
+        "category": "Windows",
+        "title": "File access and user activity indicators",
+        "helps_answer": "May help evaluate whether files, folders, removable media, or recent items appear to have been opened, viewed, or interacted with.",
+        "where_to_look": ["LNK files", "Jump Lists", "RecentDocs / MRU-style artifacts", "Shellbags", "Recycle Bin", "Office recent files", "Cloud sync logs where available"],
+        "tools": ["LECmd", "JLECmd", "ShellBags Explorer", "Registry Explorer", "Autopsy", "Commercial forensic suites"],
+        "cautions": ["A recent-file artifact does not prove the suspect personally opened the file.", "Preview panes, automated indexing, sync clients, or application behavior can create activity traces.", "File access artifacts should be tied to user/session/device-control context when attribution matters."],
+        "document": ["Artifact family", "User profile path", "Timestamp type", "File path referenced", "Whether source file was present", "Corroborating activity"],
+        "related_playbooks": ["Windows Artifact Review Refresher"],
+    },
+    {
+        "id": "usb_devices",
+        "category": "Windows",
+        "title": "USB / external device connection indicators",
+        "helps_answer": "May help evaluate whether a removable device appears to have been connected and how it may relate to user activity or copied files.",
+        "where_to_look": ["USBSTOR and device registry artifacts", "MountedDevices", "SetupAPI logs", "Event logs", "LNK and Jump Lists pointing to removable paths", "Volume serial numbers"],
+        "tools": ["Registry Explorer", "USB-focused parsers", "Timeline tools", "Autopsy", "Commercial forensic suites"],
+        "cautions": ["A USB connection does not prove file transfer.", "A connected device does not prove which person connected it.", "Device identifiers can be reused, missing, or interpreted incorrectly without corroboration."],
+        "document": ["Device make/model/serial if available", "Volume serial", "First/last connection indicators", "User association indicators", "File access artifacts linked to removable paths", "Limitations"],
+        "related_playbooks": ["External Media Hash / Copy Refresher", "Windows Artifact Review Refresher"],
+    },
+    {
+        "id": "browser_activity",
+        "category": "Browser",
+        "title": "Browser activity indicators",
+        "helps_answer": "May help evaluate web activity, searches, downloads, sessions, account use, or web application context.",
+        "where_to_look": ["Browser history", "Downloads", "Cookies/session data", "Cache", "Form history/search terms", "Extensions", "Cloud browser sync context"],
+        "tools": ["Browser-focused forensic parsers", "SQLite viewers", "Autopsy", "Commercial forensic suites"],
+        "cautions": ["A browser record does not always prove intentional visit by a specific person.", "Popups, redirects, sync, previews, and embedded content can create records.", "Downloads do not prove a file was opened or understood."],
+        "document": ["Browser/profile", "Artifact table/source", "Timestamp meaning", "URL/download path", "Account/session indicators", "Corroboration"],
+        "related_playbooks": ["Windows Artifact Review Refresher"],
+    },
+    {
+        "id": "memory_processes",
+        "category": "Memory / RAM",
+        "title": "Processes, command lines, and network context",
+        "helps_answer": "May help review what was active in memory, including process relationships, command-line arguments, and network connections.",
+        "where_to_look": ["Process list", "Process tree", "Command line output", "Network connection plugins", "Loaded DLL/modules", "Handles/files/registry references"],
+        "tools": ["Volatility 3", "Volatility Workbench", "Commercial memory analysis support", "Timeline/correlation tools"],
+        "cautions": ["A suspicious process name does not prove malware.", "An IP address is not attribution.", "Command-line evidence on a device does not prove which person typed or initiated it without supporting context."],
+        "document": ["Memory image hash", "Tool/version", "Plugin/command", "PID/process relationship", "Timestamps if available", "Corroborating disk/log artifacts"],
+        "related_playbooks": ["Memory / RAM Analysis Refresher", "Live Computer Acquisition / RAM Capture"],
+    },
+    {
+        "id": "mobile_messages_media",
+        "category": "Mobile",
+        "title": "Messages, media, app, and account context",
+        "helps_answer": "May help review communications, media, app data, account context, and device-use indicators from a mobile extraction.",
+        "where_to_look": ["Messages and attachments", "Calls/contacts", "Photos/videos and metadata", "App databases", "Location artifacts", "Accounts and device identifiers", "Extraction logs and unsupported app notes"],
+        "tools": ["Cellebrite Physical Analyzer", "Magnet AXIOM", "GrayKey output review", "SQLite viewers", "Manual validation/corroboration"],
+        "cautions": ["A message or app artifact does not prove who physically held the phone at that moment.", "Cloud sync and multi-device accounts can complicate attribution.", "Unsupported or partially parsed apps should be documented as limitations."],
+        "document": ["Extraction type", "Tool/version", "Device lock/account context", "Artifact source", "Timestamp/time zone", "Limitations and corroboration"],
+        "related_playbooks": ["Mobile Device Extraction Refresher"],
+    },
+]
+
+INVESTIGATIVE_QUESTIONS = [
+    {
+        "id": "who_used_device",
+        "question": "Who may have used or controlled the device?",
+        "look_at": ["Known passwords/PINs/passphrases", "Account logins and profile names", "Biometric/passcode setup context", "Logged-in sessions", "Device possession/location context", "Statements/admissions", "Exclusive-use indicators", "Corroborating camera/witness/physical evidence when available"],
+        "mindset": "Treat device control as a conclusion that needs support from several sources. A password admission, exclusive possession, account ownership, and user-specific artifacts can strengthen context, but no single item should be overclaimed by itself.",
+        "guardrails": ["A device artifact does not automatically identify the human actor.", "Knowing a password can support control/access, but it should be documented carefully and corroborated when important.", "Shared devices, shared passwords, remote access, cloud sync, and malware/automation can complicate attribution."],
+        "related_artifacts": ["Windows - Program execution indicators", "Windows - File access and user activity indicators", "Mobile - Messages, media, app, and account context", "Memory / RAM - Processes, command lines, and network context"],
+    },
+    {
+        "id": "file_accessed",
+        "question": "Was a file opened, viewed, or interacted with?",
+        "look_at": ["LNK files", "Jump Lists", "Recent files/MRU artifacts", "Application recent lists", "File metadata", "Shellbags", "Cloud sync context"],
+        "mindset": "Start with the artifact meaning. Some artifacts suggest interaction, some suggest presence, and some are created by applications or previews. Then ask what ties that activity to a user session or account.",
+        "guardrails": ["A file reference does not always prove intentional viewing.", "A file existing on a device does not prove the suspect knew about it.", "Tie file activity to user/session/device-control context before making stronger statements."],
+        "related_artifacts": ["Windows - File access and user activity indicators", "Browser - Browser activity indicators"],
+    },
+    {
+        "id": "command_executed",
+        "question": "Was a command or tool executed?",
+        "look_at": ["Command-line artifacts", "Console history where available", "Process execution artifacts", "Scripts/batch files", "Event logs", "EDR/tool logs", "Memory process and cmdline output"],
+        "mindset": "Separate execution evidence from actor attribution. First determine what the artifact supports about process or command activity. Then look for account, session, possession, password, remote-access, and corroborating context.",
+        "guardrails": ["A command appearing on a device does not prove which person executed it.", "A named account does not automatically prove the account holder was the person at the keyboard.", "Remote access, automation, malware, scripts, shared credentials, and scheduled tasks must be considered when relevant."],
+        "related_artifacts": ["Memory / RAM - Processes, command lines, and network context", "Windows - Program execution indicators"],
+    },
+    {
+        "id": "usb_connected",
+        "question": "Was a USB or external device connected?",
+        "look_at": ["USBSTOR/device registry artifacts", "SetupAPI logs", "MountedDevices", "Event logs", "LNK/Jump Lists referencing removable paths", "Volume serial numbers"],
+        "mindset": "Identify the device, connection context, and any user/file activity that supports why the device matters. Then avoid jumping from connection to transfer without evidence of file movement or access.",
+        "guardrails": ["USB connection does not prove file transfer.", "USB connection does not prove who connected the device.", "A path to removable media should be corroborated with file activity when possible."],
+        "related_artifacts": ["Windows - USB / external device connection indicators", "External Media Hash / Copy Refresher"],
+    },
+    {
+        "id": "browser_activity",
+        "question": "Was there browser or download activity?",
+        "look_at": ["Browser history", "Downloads database", "Cache", "Cookies/session artifacts", "Search terms/form history", "Downloaded file metadata", "User profile/account context"],
+        "mindset": "Treat browser artifacts as activity indicators that need context. Separate URL existence, visit records, download records, and opened-file evidence.",
+        "guardrails": ["A browser record does not always prove intent or knowledge.", "A download record does not prove the file was opened.", "Account sync, redirects, embedded content, and multiple users can complicate conclusions."],
+        "related_artifacts": ["Browser - Browser activity indicators", "Windows - File access and user activity indicators"],
+    },
+]
+
+CONTROL_CONTEXT_PROMPTS = [
+    {
+        "title": "Access and control context",
+        "prompt": "What facts support that a person had access to or control over the device, account, or session?",
+        "examples": ["Admitted knowing the password/PIN", "Exclusive possession or custody", "Account/profile tied to the person", "Biometric/passcode setup context", "Recent use consistent with their schedule/location", "Witness/camera/physical evidence support"],
+        "caution": "Access and control indicators support context. They do not automatically prove that the person performed every action found on the device.",
+    },
+    {
+        "title": "Actor vs. artifact separation",
+        "prompt": "What does the artifact show, and what extra evidence would be needed to connect it to a specific person?",
+        "examples": ["Artifact: command line existed", "Extra context: logged-in user, session timing, possession, admissions, remote-access review", "Artifact: browser history record", "Extra context: account/session, activity pattern, file access, corroborating source"],
+        "caution": "Avoid wording that turns tool output into a human-action conclusion unless the supporting context is documented.",
+    },
+    {
+        "title": "Alternative explanations",
+        "prompt": "What reasonable alternatives need to be ruled out or documented?",
+        "examples": ["Shared device", "Shared password", "Remote access", "Malware or automation", "Cloud sync", "Scheduled task/script", "Application preview/indexing behavior"],
+        "caution": "The point is not to invent doubt. The point is to document what the evidence supports, what it does not support, and what was considered.",
+    },
+]
+
+
+def search_artifact_areas(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for item in ARTIFACT_AREAS:
+        haystack_parts = [item.get("title", ""), item.get("category", ""), item.get("helps_answer", "")]
+        for key in ("where_to_look", "tools", "cautions", "document", "related_playbooks"):
+            haystack_parts.extend(item.get(key, []))
+        if needle in "\n".join(str(part) for part in haystack_parts).lower():
+            results.append(item)
+    return results
+
+
+def search_investigative_questions(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for item in INVESTIGATIVE_QUESTIONS:
+        haystack_parts = [item.get("question", ""), item.get("mindset", "")]
+        for key in ("look_at", "guardrails", "related_artifacts"):
+            haystack_parts.extend(item.get(key, []))
+        if needle in "\n".join(str(part) for part in haystack_parts).lower():
+            results.append(item)
+    return results
+
+
 DECISION_PATHS = [
     {
         "id": "live_computer",
@@ -644,6 +806,19 @@ GLOSSARY = [
         "category": "Reporting",
         "definition": "A guardrail reminder that a tool result or artifact can support a lead without proving attribution, intent, or a final conclusion by itself.",
         "related": ["Overclaim", "Corroboration", "Limitations"],
+    },
+
+    {
+        "term": "Device-use context",
+        "category": "Attribution",
+        "definition": "Information that helps evaluate who may have had access to or control over a device, account, session, or action. Examples can include password knowledge, possession, account ownership, logged-in sessions, admissions, and corroborating physical or witness context.",
+        "related": ["Actor vs. artifact", "Corroboration", "Overclaim"],
+    },
+    {
+        "term": "Actor vs. artifact",
+        "category": "Attribution",
+        "definition": "A reminder to separate what a digital artifact shows from who performed the related human action. A command, file access trace, or login artifact may support activity, but the human actor usually requires additional context.",
+        "related": ["Device-use context", "Does not prove", "Limitations"],
     },
 ]
 
