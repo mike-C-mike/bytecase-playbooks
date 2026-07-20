@@ -248,6 +248,8 @@ class PlaybooksApp:
         ttk.Button(nav_buttons, text="Artifacts", command=lambda: self.show_step_panel("artifacts")).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Cautions", command=lambda: self.show_step_panel("cautions")).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Document", command=lambda: self.show_step_panel("document")).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Commands", command=self.show_command_examples).pack(side="left", padx=(0, 8))
+        ttk.Button(nav_buttons, text="Does Not Prove", command=self.show_does_not_prove).pack(side="left", padx=(0, 8))
 
         card = self._panel(parent, "Step card")
         card.columnconfigure(0, weight=1)
@@ -265,6 +267,7 @@ class PlaybooksApp:
         ttk.Button(card_actions, text="Deep Dive", command=self.show_deep_dive).pack(side="left", padx=(0, 8))
         ttk.Button(card_actions, text="Copy Summary", command=self.copy_step_summary).pack(side="left", padx=(0, 8))
         ttk.Button(card_actions, text="Copy Document List", command=self.copy_document_reminders).pack(side="left", padx=(0, 8))
+        ttk.Button(card_actions, text="Copy Commands", command=self.copy_command_examples).pack(side="left", padx=(0, 8))
 
         detail = self._panel(parent, "Read this first")
         ttk.Label(
@@ -511,6 +514,13 @@ class PlaybooksApp:
         lines.append("")
         lines.append("Cautions:")
         lines.extend(f"- {item}" for item in step.get("cautions", []))
+        if step.get("does_not_prove"):
+            lines.append("")
+            lines.append("Does not prove:")
+            lines.extend(f"- {item}" for item in step.get("does_not_prove", []))
+        if step.get("command_examples"):
+            lines.append("")
+            lines.append("Command examples available. Use Commands for sample syntax and guardrails.")
         return "\n".join(lines)
 
     def format_step_full(self, step):
@@ -522,6 +532,14 @@ class PlaybooksApp:
         lines.append("")
         lines.append("Cautions:")
         lines.extend(f"- {item}" for item in step.get("cautions", []))
+        if step.get("does_not_prove"):
+            lines.append("")
+            lines.append("Does not prove:")
+            lines.extend(f"- {item}" for item in step.get("does_not_prove", []))
+        if step.get("command_examples"):
+            lines.append("")
+            lines.append("Command examples:")
+            lines.append(self.format_command_examples(step))
         lines.append("")
         lines.append("Document:")
         lines.extend(f"- {item}" for item in step.get("document", []))
@@ -591,6 +609,42 @@ class PlaybooksApp:
         lines = [f"Step {self.current_step_index}: {step.get('title', '')}", "", "What to document:"]
         lines.extend(f"- {item}" for item in step.get("document", []))
         self.copy_to_clipboard("\n".join(lines), "Document reminder list")
+
+    def format_command_examples(self, step):
+        commands = step.get("command_examples", [])
+        if not commands:
+            return "No command examples are built into this step. Use the tool documentation, agency SOP, and your validated local process."
+        lines = []
+        for item in commands:
+            lines.append(item.get("label", "Command example"))
+            lines.append(item.get("example", ""))
+            lines.append("Purpose: " + item.get("purpose", ""))
+            lines.append("Does not prove: " + item.get("does_not_prove", ""))
+            lines.append("")
+        lines.append("Reminder: Command examples are learning prompts. Adjust paths, filenames, options, tool locations, and scope for your environment.")
+        return "\n".join(lines).strip()
+
+    def format_does_not_prove(self, step):
+        values = step.get("does_not_prove", [])
+        if not values:
+            values = [
+                "This step supports examiner understanding, but it does not produce a conclusion by itself.",
+                "Tool output must be reviewed in context and corroborated when it matters.",
+            ]
+        lines = ["Does not prove / overclaim guardrails", ""]
+        lines.extend(f"- {item}" for item in values)
+        return "\n".join(lines)
+
+    def show_command_examples(self):
+        step = self.get_step()
+        self.show_text_popup("Command Examples", self.format_command_examples(step))
+
+    def show_does_not_prove(self):
+        step = self.get_step()
+        self.show_text_popup("Does Not Prove", self.format_does_not_prove(step))
+
+    def copy_command_examples(self):
+        self.copy_to_clipboard(self.format_command_examples(self.get_step()), "Command examples")
 
     def show_step_panel(self, key):
         step = self.get_step()
@@ -816,7 +870,10 @@ class PlaybooksApp:
             lines.append("")
             lines.append("Steps:")
             for idx, step in enumerate(data.get("steps", []), start=1):
-                lines.append(f"{idx}. {step.get('title', '')}")
+                suffix = ""
+                if step.get("command_examples"):
+                    suffix = "  [command examples]"
+                lines.append(f"{idx}. {step.get('title', '')}{suffix}")
         self.set_text(self.reference_detail_text, "\n".join(lines))
 
     def open_reference_playbook(self):
@@ -906,3 +963,4 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
+

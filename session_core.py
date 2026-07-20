@@ -127,10 +127,19 @@ def session_to_text(session: Dict[str, Any]) -> str:
             lines.append(f"Field Focus: {step.get('field_focus', '')}")
             lines.append(f"Learning Detail: {step.get('learning_detail', '')}")
             lines.append(f"Why: {step.get('why', '')}")
-            for label, key in [("Possible Tools", "tools"), ("Common Artifacts", "artifacts"), ("Cautions", "cautions"), ("Document", "document")]:
-                lines.append(label + ":")
-                for value in step.get(key, []):
-                    lines.append(f"- {value}")
+            for label, key in [("Possible Tools", "tools"), ("Common Artifacts", "artifacts"), ("Cautions", "cautions"), ("Does Not Prove", "does_not_prove"), ("Document", "document")]:
+                values = step.get(key, [])
+                if values:
+                    lines.append(label + ":")
+                    for value in values:
+                        lines.append(f"- {value}")
+            commands = step.get("command_examples", [])
+            if commands:
+                lines.append("Command Examples:")
+                for command in commands:
+                    lines.append(f"- {command.get('label', 'Command')}: {command.get('example', '')}")
+                    lines.append(f"  Purpose: {command.get('purpose', '')}")
+                    lines.append(f"  Does not prove: {command.get('does_not_prove', '')}")
             notes = (item.get("notes") or "").strip()
             if notes:
                 lines.append("Step Reference Notes:")

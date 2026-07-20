@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -84,6 +84,11 @@ PLAYBOOKS = [
                 "artifacts": ["Memory image", "Capture log", "Hash value if generated", "Tool output"],
                 "cautions": ["Admin privileges may be required.", "Large memory images need adequate destination storage.", "Some endpoint protections may interfere.", "A successful capture still needs later validation/review."],
                 "document": ["Capture tool/version", "Output filename", "Destination media", "Hash if available", "Start/end time", "Errors or warnings"],
+                "command_examples": [
+                    {"label": "Confirm capture output exists", "example": "dir <destination_folder>", "purpose": "Confirm that the expected memory image or tool output was created.", "does_not_prove": "It does not prove the image is complete, valid, or correctly interpreted."},
+                    {"label": "Calculate SHA-256 on Windows", "example": "Get-FileHash .\\memory.raw -Algorithm SHA256", "purpose": "Record an integrity value for the captured memory image when appropriate.", "does_not_prove": "A matching hash supports integrity; it does not explain what is in memory."},
+                ],
+                "does_not_prove": ["A successful capture does not prove that all volatile evidence was collected.", "A hash value does not interpret memory content.", "Tool success does not remove the need to document limitations."],
             },
             {
                 "title": "Collect targeted live context if authorized",
@@ -257,6 +262,10 @@ PLAYBOOKS = [
                 "artifacts": ["OS/build details", "Symbol status", "Image metadata"],
                 "cautions": ["Plugin errors may reflect symbol/tool issues rather than evidence facts.", "Record command output and errors."],
                 "document": ["Command/tool used", "OS/build output", "Symbol issues", "Tool version"],
+                "command_examples": [
+                    {"label": "Volatility 3 image information", "example": "vol.py -f memory.raw windows.info", "purpose": "Start by identifying basic Windows memory image context and symbol/tool interpretation status.", "does_not_prove": "It does not prove suspicious activity or user action."},
+                ],
+                "does_not_prove": ["OS/build output does not prove user activity.", "A plugin error does not automatically prove tampering or corruption.", "Symbol status must be documented before deeper reliance on plugin output."],
             },
             {
                 "title": "Review processes and process tree",
@@ -267,6 +276,12 @@ PLAYBOOKS = [
                 "artifacts": ["Process names", "PIDs/PPIDs", "Start times", "Parent-child relationships"],
                 "cautions": ["A process name alone is not proof of malware.", "Terminated/hidden process views may differ by plugin."],
                 "document": ["Commands used", "Processes of interest", "Why selected", "Screenshots/output paths"],
+                "command_examples": [
+                    {"label": "Process list", "example": "vol.py -f memory.raw windows.pslist", "purpose": "List active processes visible through a standard process walk.", "does_not_prove": "A process name alone does not prove malware or user intent."},
+                    {"label": "Process tree", "example": "vol.py -f memory.raw windows.pstree", "purpose": "Review parent/child process relationships.", "does_not_prove": "A strange parent/child relationship is a lead, not a final conclusion."},
+                    {"label": "Pool scan process view", "example": "vol.py -f memory.raw windows.psscan", "purpose": "Look for process objects that may not appear in the normal process list.", "does_not_prove": "Differences between plugin views require explanation and corroboration."},
+                ],
+                "does_not_prove": ["A process name by itself does not prove malicious activity.", "A suspicious process relationship should be treated as a lead.", "Hidden or terminated process indicators need corroboration."],
             },
             {
                 "title": "Review command lines and network connections",
@@ -277,6 +292,11 @@ PLAYBOOKS = [
                 "artifacts": ["Command lines", "Local/remote addresses", "Ports", "Owning PIDs"],
                 "cautions": ["IP presence is not attribution.", "Connections may be stale or normal.", "Time context matters."],
                 "document": ["Commands/plugins", "Relevant rows", "Associated PID/process", "Limitations"],
+                "command_examples": [
+                    {"label": "Command-line arguments", "example": "vol.py -f memory.raw windows.cmdline", "purpose": "Review command-line arguments associated with processes.", "does_not_prove": "Command-line text still needs context and corroboration."},
+                    {"label": "Network scan", "example": "vol.py -f memory.raw windows.netscan", "purpose": "Review network endpoints, ports, and process associations visible in memory.", "does_not_prove": "An IP address is not attribution, and a connection row may be stale or benign."},
+                ],
+                "does_not_prove": ["Network connection output does not prove attribution.", "A command line does not always prove who typed it.", "Time context and corroboration are required."],
             },
             {
                 "title": "Review modules, handles, and injection indicators",
@@ -287,6 +307,12 @@ PLAYBOOKS = [
                 "artifacts": ["Loaded modules", "File/registry handles", "Suspicious memory regions", "Dumped memory segments"],
                 "cautions": ["malfind-style output is a lead, not a final malware conclusion.", "False positives happen.", "Dumping content may create sensitive derivative artifacts."],
                 "document": ["Reason plugin was run", "Output path", "Findings needing corroboration", "Limitations"],
+                "command_examples": [
+                    {"label": "Loaded modules", "example": "vol.py -f memory.raw windows.dlllist --pid <PID>", "purpose": "Review modules loaded by a process of interest.", "does_not_prove": "A module list by itself does not prove malicious injection."},
+                    {"label": "Handles", "example": "vol.py -f memory.raw windows.handles --pid <PID>", "purpose": "Review files, registry keys, events, and other objects referenced by a process.", "does_not_prove": "A handle shows reference context, not necessarily user intent."},
+                    {"label": "Injection indicators", "example": "vol.py -f memory.raw windows.malfind --pid <PID>", "purpose": "Look for memory regions that may warrant deeper review.", "does_not_prove": "malfind-style output is a lead; false positives and benign explanations are possible."},
+                ],
+                "does_not_prove": ["malfind output does not equal a final malware conclusion.", "Loaded modules and handles must be interpreted with process and system context.", "Dumped memory regions may require separate handling and documentation."],
             },
             {
                 "title": "Document conclusions carefully",
@@ -297,6 +323,7 @@ PLAYBOOKS = [
                 "artifacts": ["Referenced output", "Artifact IDs", "Screenshots", "Limitations"],
                 "cautions": ["Do not claim user intent from one artifact.", "Do not equate suspicious with malicious without support.", "Record tool limitations."],
                 "document": ["What was observed", "How it was observed", "What it may indicate", "What it does not prove", "Supporting artifacts"],
+                "does_not_prove": ["A single plugin result rarely proves intent by itself.", "Suspicious does not automatically mean malicious.", "Tool output should be separated from examiner interpretation."],
             },
         ],
     },
@@ -606,8 +633,19 @@ GLOSSARY = [
         "definition": "A documented acquisition of storage media or selected data created for later examination. The image format, tool, verification result, and limitations should be recorded.",
         "related": ["Dead-box imaging", "Hash verification", "Write blocker"],
     },
+    {
+        "term": "Command example",
+        "category": "Playbooks",
+        "definition": "A sample command or tool action shown as a learning/reference prompt. Commands must be adapted to the examiner's tool path, image name, case scope, agency policy, and operating environment.",
+        "related": ["Volatility", "Documentation", "Limitations"],
+    },
+    {
+        "term": "Does not prove",
+        "category": "Reporting",
+        "definition": "A guardrail reminder that a tool result or artifact can support a lead without proving attribution, intent, or a final conclusion by itself.",
+        "related": ["Overclaim", "Corroboration", "Limitations"],
+    },
 ]
-
 
 def search_playbooks(query):
     needle = (query or "").strip().lower()
@@ -618,8 +656,10 @@ def search_playbooks(query):
         haystack_parts = [playbook.get("title", ""), playbook.get("category", ""), playbook.get("summary", "")]
         for step in playbook.get("steps", []):
             haystack_parts.extend([step.get("title", ""), step.get("field_focus", ""), step.get("learning_detail", ""), step.get("why", "")])
-            for key in ("tools", "artifacts", "cautions", "document"):
+            for key in ("tools", "artifacts", "cautions", "document", "does_not_prove"):
                 haystack_parts.extend(step.get(key, []))
+            for command in step.get("command_examples", []):
+                haystack_parts.extend([command.get("label", ""), command.get("example", ""), command.get("purpose", ""), command.get("does_not_prove", "")])
         haystack = "\n".join(str(part) for part in haystack_parts).lower()
         if needle in haystack:
             results.append(playbook)

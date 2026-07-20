@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.4.0
+v0.5.0
 
 ## Purpose
 
@@ -21,12 +21,8 @@ It helps answer questions such as:
 - What artifact areas may commonly matter?
 - What tools may be used for this area?
 - What should I avoid overclaiming?
-
-## Guide Me decision helper
-
-The **Guide Me** tab is a shortcut for new examiners or occasional examiners who know the situation but are not sure which playbook to open. It recommends a playbook based on common scenarios such as powered-on computer, dead-box imaging, mobile extraction, memory analysis, Windows artifact review, or external media hash/copy work.
-
-The recommendation screen explains why the path fits, what questions should be asked before continuing, and what first steps the playbook will emphasize.
+- What sample command or tool action might apply?
+- What does this step not prove by itself?
 
 ## What ByteCase Playbooks is not
 
@@ -37,7 +33,7 @@ It is not the same as ByteCase Workflow.
 - **ByteCase Playbooks explains the work.**
 - **ByteCase Workflow tracks the work.**
 
-## v0.4.0 included playbooks
+## Included playbooks
 
 This release includes six built-in playbooks:
 
@@ -48,18 +44,44 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.4.0 updates
+## v0.5.0 updates
 
-v0.4.0 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
+v0.5.0 adds command/example guidance and stronger overclaim guardrails.
 
 Changes include:
 
-- Replaced Python 3.10+ type annotations with older-compatible typing
-- Fixed a Tkinter mouse-wheel callback error caused by combobox popup widgets
-- Removed case number, examiner, and overall case/session notes fields
-- Session save now records only the current playbook, mode, current step, reviewed steps, and step reference notes
-- Session exports now save under `ByteCase\playbooks\sessions\` instead of a case folder
-- Preserved the Reference tab, glossary search, Windows artifact review playbook, and external media hash/copy playbook
+- Added **Commands** button on the Playbook screen
+- Added **Does Not Prove** button on the Playbook screen
+- Added **Copy Commands** quick action
+- Added command examples to RAM capture and Volatility-oriented memory-analysis steps
+- Added command/example details to Learning / Refresher mode when available
+- Added **Does Not Prove** reminders to relevant steps
+- Included command examples and overclaim guardrails in TXT/DOCX session exports
+- Added glossary entries for Command example and Does not prove
+- Expanded search to include command examples and does-not-prove guardrails
+
+## Command examples
+
+Command examples are learning/reference prompts. They are not one-size-fits-all instructions.
+
+Users must adapt examples to their own:
+
+- Tool path
+- Filename
+- Image path
+- Case scope
+- Agency policy
+- Training
+- Validated local process
+- Operating environment
+
+For example, a Volatility command may appear as:
+
+```text
+vol.py -f memory.raw windows.pslist
+```
+
+The examiner must still confirm the correct tool installation, image filename, plugin availability, permissions, symbols, and output handling.
 
 ## Main modes
 
@@ -73,7 +95,7 @@ A deeper mode for training, downtime review, or examiners who do not perform a t
 
 ## Step card design
 
-Each playbook step includes:
+Each playbook step can include:
 
 - Field focus
 - Learning detail
@@ -81,7 +103,9 @@ Each playbook step includes:
 - Possible tools
 - Common artifacts / outputs
 - Cautions
+- Does-not-prove reminders
 - What to document
+- Command examples, where useful
 - Optional step reference notes
 
 Each step has quick explanation buttons:
@@ -91,6 +115,8 @@ Each step has quick explanation buttons:
 - Artifacts
 - Cautions
 - Document
+- Commands
+- Does Not Prove
 
 ## Output structure
 
@@ -127,27 +153,11 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Fix Playbooks session scope and Python compatibility
+Add Playbooks command guidance and overclaim guardrails
 ```
 
 ## Recommended commit description
 
 ```text
-Fixes Python compatibility and Tkinter mouse-wheel handling, then simplifies Playbooks session saving so it records only the current playbook state instead of case details or case notes. Session output now saves under ByteCase/playbooks/sessions, preserving Playbooks as a reference/refresher tool rather than a case workflow tracker.
+Adds command/example guidance and does-not-prove guardrails to ByteCase Playbooks. Includes Commands, Does Not Prove, and Copy Commands actions, adds Volatility-oriented memory-analysis command examples, expands reference search and glossary coverage, and includes command guidance in TXT/DOCX session exports while preserving Playbooks as a non-case reference/refresher tool.
 ```
-
-
-## v0.4.0
-
-- Reordered the Playbook step screen so the reading/explanation section appears before user notes.
-- Renamed the explanation panel to **Read this first**.
-- Renamed step notes to **Your notes for this step** and clarified that these are optional session/reference notes, not case notes.
-
-
-## v0.4.0 highlights
-
-- Added step context text showing where the selected step sits in the playbook.
-- Added Pop Out Reading for real-time reference use.
-- Added Deep Dive so users can open the full learning layer without changing modes.
-- Added Copy Summary and Copy Document List actions for quick reference/session notes.
-- Expanded the built-in glossary with corroboration, limitations, volatile data, and forensic image entries.

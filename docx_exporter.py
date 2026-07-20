@@ -62,9 +62,18 @@ def export_session_docx(session: Dict[str, Any], output_path) -> Path:
             doc.add_paragraph(f"Field Focus: {step.get('field_focus', '')}")
             doc.add_paragraph(f"Learning Detail: {step.get('learning_detail', '')}")
             doc.add_paragraph(f"Why: {step.get('why', '')}")
-            for label, key in [("Possible Tools", "tools"), ("Common Artifacts", "artifacts"), ("Cautions", "cautions"), ("Document", "document")]:
-                doc.add_paragraph(label + ":")
-                add_bullets(doc, step.get(key, []))
+            for label, key in [("Possible Tools", "tools"), ("Common Artifacts", "artifacts"), ("Cautions", "cautions"), ("Does Not Prove", "does_not_prove"), ("Document", "document")]:
+                values = step.get(key, [])
+                if values:
+                    doc.add_paragraph(label + ":")
+                    add_bullets(doc, values)
+            commands = step.get("command_examples", [])
+            if commands:
+                doc.add_paragraph("Command Examples:")
+                for command in commands:
+                    doc.add_paragraph(f"{command.get('label', 'Command')}: {command.get('example', '')}", style="List Bullet")
+                    doc.add_paragraph(f"Purpose: {command.get('purpose', '')}")
+                    doc.add_paragraph(f"Does not prove: {command.get('does_not_prove', '')}")
             notes = (item.get("notes") or "").strip()
             if notes:
                 doc.add_paragraph("Step Reference Notes:")
