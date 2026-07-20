@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.3.0"
+APP_VERSION = "0.4.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -580,6 +580,31 @@ GLOSSARY = [
         "category": "Reporting",
         "definition": "A statement that goes beyond what the artifact, tool output, or available context supports. Playbooks should help examiners document observations without overstating conclusions.",
         "related": ["Limitations", "Corroboration", "Examiner judgment"],
+    },
+
+    {
+        "term": "Corroboration",
+        "category": "Analysis",
+        "definition": "The practice of checking whether an observation is supported by another artifact, source, timestamp, log, tool output, or case context before relying on it heavily.",
+        "related": ["Overclaim", "Limitations", "Artifact"],
+    },
+    {
+        "term": "Limitations",
+        "category": "Reporting",
+        "definition": "Known boundaries of the tool, data source, extraction type, parser support, authority, or examiner process. Limitations should be documented instead of hidden.",
+        "related": ["Overclaim", "Tool validation", "Unsupported app"],
+    },
+    {
+        "term": "Volatile data",
+        "category": "Memory",
+        "definition": "Data that can change or disappear quickly, especially on a powered-on system. Examples may include RAM, running processes, active network connections, logged-in users, and mounted volumes.",
+        "related": ["Live acquisition", "RAM capture", "Memory analysis"],
+    },
+    {
+        "term": "Forensic image",
+        "category": "Acquisition",
+        "definition": "A documented acquisition of storage media or selected data created for later examination. The image format, tool, verification result, and limitations should be recorded.",
+        "related": ["Dead-box imaging", "Hash verification", "Write blocker"],
     },
 ]
 

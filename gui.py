@@ -256,19 +256,40 @@ class PlaybooksApp:
         ttk.Label(card, textvariable=self.step_header_var, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
         self.step_check_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(card, text="Mark as reviewed", variable=self.step_check_var, command=self.update_step_checked).grid(row=0, column=1, sticky="e", padx=10, pady=8)
-        ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
-        ttk.Label(card, text="Step reference notes").grid(row=2, column=0, sticky="w", padx=10, pady=(2, 2))
-        self.step_notes_text = tk.Text(card, height=6)
-        self.step_notes_text.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 6))
+        self.step_context_var = tk.StringVar()
+        ttk.Label(card, textvariable=self.step_context_var, style="Muted.TLabel", wraplength=980).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        card_actions = ttk.Frame(card)
+        card_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(card_actions, text="Pop Out Reading", command=self.pop_out_current_reading).pack(side="left", padx=(0, 8))
+        ttk.Button(card_actions, text="Deep Dive", command=self.show_deep_dive).pack(side="left", padx=(0, 8))
+        ttk.Button(card_actions, text="Copy Summary", command=self.copy_step_summary).pack(side="left", padx=(0, 8))
+        ttk.Button(card_actions, text="Copy Document List", command=self.copy_document_reminders).pack(side="left", padx=(0, 8))
+
+        detail = self._panel(parent, "Read this first")
+        ttk.Label(
+            detail,
+            text="Read the guidance for the selected step first. Use the buttons above for focused explanations when you need more context.",
+            style="Muted.TLabel",
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 0))
+        self.detail_text = tk.Text(detail, height=16)
+        self.detail_text.pack(fill="both", expand=True, padx=10, pady=10)
+        style_text_widget(self.detail_text, self.colors)
+        self.detail_text.configure(state="disabled")
+
+        notes = self._panel(parent, "Your notes for this step")
+        ttk.Label(
+            notes,
+            text="Optional reference notes for your own learning or session continuity. This is not a case notes area.",
+            style="Muted.TLabel",
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 0))
+        self.step_notes_text = tk.Text(notes, height=5)
+        self.step_notes_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.step_notes_text, self.colors)
         self.step_notes_text.bind("<FocusOut>", lambda _e: self.save_current_step_notes())
         self.step_notes_text.bind("<KeyRelease>", lambda _e: self.mark_dirty_step_notes())
-
-        detail = self._panel(parent, "Explanation")
-        self.detail_text = tk.Text(detail, height=12)
-        self.detail_text.pack(fill="x", padx=10, pady=10)
-        style_text_widget(self.detail_text, self.colors)
-        self.detail_text.configure(state="disabled")
 
     def _build_session_tab(self, parent):
         summary_panel = self._panel(parent, "Playbook progress")
@@ -472,6 +493,8 @@ class PlaybooksApp:
         state = self.get_step_state()
         self.step_header_var.set(f"Step {self.current_step_index}: {step.get('title', '')}")
         self.step_focus_var.set(step.get("field_focus", ""))
+        if hasattr(self, "step_context_var"):
+            self.step_context_var.set(self.format_step_context())
         self.step_check_var.set(bool(state.get("checked")))
         self.set_text(self.step_notes_text, state.get("notes", ""), readonly=False)
         mode = self.session.get("mode", "Field Reference")
@@ -503,6 +526,71 @@ class PlaybooksApp:
         lines.append("Document:")
         lines.extend(f"- {item}" for item in step.get("document", []))
         return "\n".join(lines)
+
+
+    def format_step_context(self):
+        pb = self.current_playbook()
+        steps = pb.get("steps", [])
+        total = len(steps)
+        current = max(1, min(self.current_step_index, total or 1))
+        parts = [f"Step {current} of {total}."]
+        if current > 1:
+            parts.append("Previous: " + steps[current - 2].get("title", ""))
+        if current < total:
+            parts.append("Next: " + steps[current].get("title", ""))
+        parts.append("Use Pop Out Reading during a live reference session, or Deep Dive when studying the step.")
+        return " ".join(parts)
+
+    def current_reading_text(self):
+        step = self.get_step()
+        mode = self.session.get("mode", "Field Reference")
+        if mode == "Learning / Refresher":
+            return self.format_step_full(step)
+        return self.format_step_field(step)
+
+    def pop_out_current_reading(self):
+        step = self.get_step()
+        title = f"Step {self.current_step_index}: {step.get('title', '')}"
+        self.show_text_popup(title, self.current_reading_text())
+
+    def show_deep_dive(self):
+        step = self.get_step()
+        title = f"Deep Dive - Step {self.current_step_index}: {step.get('title', '')}"
+        self.show_text_popup(title, self.format_step_full(step))
+
+    def build_step_summary_text(self):
+        step = self.get_step()
+        lines = [
+            f"Step {self.current_step_index}: {step.get('title', '')}",
+            "",
+            "Field focus:",
+            step.get("field_focus", ""),
+            "",
+            "Why this matters:",
+            step.get("why", ""),
+            "",
+            "Document:",
+        ]
+        lines.extend(f"- {item}" for item in step.get("document", []))
+        lines.append("")
+        lines.append("Cautions:")
+        lines.extend(f"- {item}" for item in step.get("cautions", []))
+        return "\n".join(lines)
+
+    def copy_to_clipboard(self, text, label="Text"):
+        self.root.clipboard_clear()
+        self.root.clipboard_append(text)
+        self.root.update()
+        messagebox.showinfo("Copied", f"{label} copied to clipboard.")
+
+    def copy_step_summary(self):
+        self.copy_to_clipboard(self.build_step_summary_text(), "Step summary")
+
+    def copy_document_reminders(self):
+        step = self.get_step()
+        lines = [f"Step {self.current_step_index}: {step.get('title', '')}", "", "What to document:"]
+        lines.extend(f"- {item}" for item in step.get("document", []))
+        self.copy_to_clipboard("\n".join(lines), "Document reminder list")
 
     def show_step_panel(self, key):
         step = self.get_step()
@@ -818,4 +906,3 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
-

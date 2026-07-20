@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.3.0
+v0.4.0
 
 ## Purpose
 
@@ -37,7 +37,7 @@ It is not the same as ByteCase Workflow.
 - **ByteCase Playbooks explains the work.**
 - **ByteCase Workflow tracks the work.**
 
-## v0.3.0 included playbooks
+## v0.4.0 included playbooks
 
 This release includes six built-in playbooks:
 
@@ -48,9 +48,9 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.3.0 updates
+## v0.4.0 updates
 
-v0.3.0 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
+v0.4.0 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
 
 Changes include:
 
@@ -135,3 +135,19 @@ Fix Playbooks session scope and Python compatibility
 ```text
 Fixes Python compatibility and Tkinter mouse-wheel handling, then simplifies Playbooks session saving so it records only the current playbook state instead of case details or case notes. Session output now saves under ByteCase/playbooks/sessions, preserving Playbooks as a reference/refresher tool rather than a case workflow tracker.
 ```
+
+
+## v0.4.0
+
+- Reordered the Playbook step screen so the reading/explanation section appears before user notes.
+- Renamed the explanation panel to **Read this first**.
+- Renamed step notes to **Your notes for this step** and clarified that these are optional session/reference notes, not case notes.
+
+
+## v0.4.0 highlights
+
+- Added step context text showing where the selected step sits in the playbook.
+- Added Pop Out Reading for real-time reference use.
+- Added Deep Dive so users can open the full learning layer without changing modes.
+- Added Copy Summary and Copy Document List actions for quick reference/session notes.
+- Expanded the built-in glossary with corroboration, limitations, volatile data, and forensic image entries.
