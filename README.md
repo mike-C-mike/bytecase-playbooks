@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.2.3
+v0.3.0
 
 ## Purpose
 
@@ -22,6 +22,12 @@ It helps answer questions such as:
 - What tools may be used for this area?
 - What should I avoid overclaiming?
 
+## Guide Me decision helper
+
+The **Guide Me** tab is a shortcut for new examiners or occasional examiners who know the situation but are not sure which playbook to open. It recommends a playbook based on common scenarios such as powered-on computer, dead-box imaging, mobile extraction, memory analysis, Windows artifact review, or external media hash/copy work.
+
+The recommendation screen explains why the path fits, what questions should be asked before continuing, and what first steps the playbook will emphasize.
+
 ## What ByteCase Playbooks is not
 
 ByteCase Playbooks does not perform acquisition, extraction, parsing, analysis, or reporting conclusions. It does not replace legal authority, agency policy, formal training, tool validation, or examiner judgment.
@@ -31,7 +37,7 @@ It is not the same as ByteCase Workflow.
 - **ByteCase Playbooks explains the work.**
 - **ByteCase Workflow tracks the work.**
 
-## v0.2.3 included playbooks
+## v0.3.0 included playbooks
 
 This release includes six built-in playbooks:
 
@@ -42,9 +48,9 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.2.3 updates
+## v0.3.0 updates
 
-v0.2.3 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
+v0.3.0 fixes Python 3.7/3.9 compatibility issues, hardens mouse-wheel scrolling around Tkinter combobox popdowns, and simplifies session saving so Playbooks does not behave like a case-notes tool.
 
 Changes include:
 

@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.2.3"
+APP_VERSION = "0.3.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -429,6 +429,95 @@ PLAYBOOKS = [
         ],
     }
 ]
+
+
+DECISION_PATHS = [
+    {
+        "id": "live_computer",
+        "label": "Powered-on computer / live system",
+        "playbook_id": "live_computer_acquisition_ram",
+        "recommended_mode": "Field Reference",
+        "why": "A powered-on system may contain volatile data that can be lost during shutdown, including RAM, active processes, network connections, mounted volumes, and encryption context.",
+        "questions": [
+            "Is live collection authorized and within scope?",
+            "Could shutdown lose data that matters?",
+            "Do agency SOPs allow RAM capture or live response?",
+        ],
+        "first_steps": ["Confirm authority and scope", "Document initial state", "Think through network/isolation decisions", "Prioritize volatile data"],
+    },
+    {
+        "id": "dead_box_computer",
+        "label": "Powered-off computer / removed drive",
+        "playbook_id": "dead_box_computer_imaging",
+        "recommended_mode": "Field Reference",
+        "why": "A powered-off system is usually approached as a preservation/imaging workflow, with attention to physical documentation, write protection, imaging, and verification.",
+        "questions": [
+            "What storage media is actually in scope?",
+            "Is write protection available and validated?",
+            "Do you have destination capacity and an approved imaging format?",
+        ],
+        "first_steps": ["Confirm target media and scope", "Photograph and document condition", "Use write protection where applicable", "Create and verify the image"],
+    },
+    {
+        "id": "mobile_device",
+        "label": "Mobile phone / tablet extraction",
+        "playbook_id": "mobile_device_extraction",
+        "recommended_mode": "Field Reference",
+        "why": "Mobile workflows depend heavily on scope, device state, lock status, network condition, tool support, extraction type, and documented limitations.",
+        "questions": [
+            "Is the device and data category clearly within scope?",
+            "What is the power, lock, and network state?",
+            "Which extraction types are available for this device and tool version?",
+        ],
+        "first_steps": ["Confirm authority, scope, and device identity", "Document condition and connectivity", "Choose extraction approach", "Preserve outputs and logs"],
+    },
+    {
+        "id": "memory_analysis",
+        "label": "Memory image / RAM analysis",
+        "playbook_id": "memory_ram_analysis",
+        "recommended_mode": "Learning / Refresher",
+        "why": "Memory analysis often benefits from a structured review order so the examiner understands OS context, processes, process trees, command lines, connections, and suspicious indicators without overclaiming.",
+        "questions": [
+            "What system produced the memory image?",
+            "Has the image been preserved and hashed?",
+            "What question are you trying to answer before running plugins?",
+        ],
+        "first_steps": ["Confirm image source and integrity", "Identify OS details", "Review processes and process tree", "Review network and command-line context"],
+    },
+    {
+        "id": "windows_artifacts",
+        "label": "Windows artifact review",
+        "playbook_id": "windows_artifact_review",
+        "recommended_mode": "Learning / Refresher",
+        "why": "Windows artifact review is strongest when the examiner starts with the question being asked, then reviews user activity, execution, file access, browser, USB, and log sources while documenting limits.",
+        "questions": [
+            "What user or activity question are you trying to answer?",
+            "Which artifact families are most relevant?",
+            "What corroboration is available?",
+        ],
+        "first_steps": ["Define the question", "Identify user profiles and time zone context", "Review common activity artifacts", "Document limitations and corroboration"],
+    },
+    {
+        "id": "external_media",
+        "label": "External media hash / copy",
+        "playbook_id": "external_media_hash_copy",
+        "recommended_mode": "Field Reference",
+        "why": "External media work can look simple, but still needs scope, device identification, copy/imaging method, hash documentation, and clean output preservation.",
+        "questions": [
+            "Is the entire media or only selected files in scope?",
+            "Will you image it, copy selected data, or generate a hash-only record?",
+            "How will integrity and output location be documented?",
+        ],
+        "first_steps": ["Confirm scope and media identity", "Choose copy/imaging/hash approach", "Record hashes and logs", "Preserve outputs and limitations"],
+    },
+]
+
+
+def get_decision_path(path_id):
+    for path in DECISION_PATHS:
+        if path["id"] == path_id:
+            return path
+    return None
 
 
 GLOSSARY = [

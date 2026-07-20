@@ -15,6 +15,7 @@ from playbook_data import (
     APP_SUBTITLE,
     APP_VERSION,
     GLOSSARY,
+    DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
     categories,
@@ -96,17 +97,20 @@ class PlaybooksApp:
 
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
         self.playbook_tab = ScrollableFrame(self.notebook, self.colors)
+        self.decision_tab = ScrollableFrame(self.notebook, self.colors)
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
         self.notebook.add(self.start_tab, text="Start")
+        self.notebook.add(self.decision_tab, text="Guide Me")
         self.notebook.add(self.playbook_tab, text="Playbook")
         self.notebook.add(self.session_tab, text="Progress / Export")
         self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
+        self._build_decision_tab(self.decision_tab.frame)
         self._build_playbook_tab(self.playbook_tab.frame)
         self._build_session_tab(self.session_tab.frame)
         self._build_reference_tab(self.reference_tab.frame)
@@ -126,7 +130,8 @@ class PlaybooksApp:
         mode.grid(row=0, column=1, sticky="w", padx=10, pady=8)
         mode.bind("<<ComboboxSelected>>", lambda _e: self.set_mode())
         ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Button(intro, text="Search Reference", command=lambda: self.notebook.select(self.reference_tab)).grid(row=0, column=3, padx=10, pady=8)
+        ttk.Button(intro, text="Guide Me", style="Accent.TButton", command=lambda: self.notebook.select(self.decision_tab)).grid(row=0, column=3, padx=10, pady=8)
+        ttk.Button(intro, text="Search Reference", command=lambda: self.notebook.select(self.reference_tab)).grid(row=0, column=4, padx=10, pady=8)
 
         selector = self._panel(parent, "Select a playbook")
         selector.columnconfigure(0, weight=1)
@@ -159,9 +164,61 @@ class PlaybooksApp:
         actions = ttk.Frame(quick)
         actions.pack(fill="x", padx=10, pady=(0, 10))
         ttk.Button(actions, text="Continue", command=lambda: self.notebook.select(self.playbook_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Guide Me", command=lambda: self.notebook.select(self.decision_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
+
+    def _build_decision_tab(self, parent):
+        intro = self._panel(parent, "Guide Me")
+        ttk.Label(
+            intro,
+            text="Pick the situation closest to what you are doing. Playbooks will suggest the best built-in reference and explain why.",
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+        ttk.Label(
+            intro,
+            text="This is not a case workflow tracker. It is a learning/reference shortcut into the right playbook.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).pack(anchor="w", padx=10, pady=(0, 8))
+
+        chooser = self._panel(parent, "What are you working on?")
+        chooser.columnconfigure(0, weight=1)
+        chooser.columnconfigure(1, weight=1)
+        self.decision_path_var = tk.StringVar(value=DECISION_PATHS[0]["label"] if DECISION_PATHS else "")
+        self.decision_box = ttk.Combobox(
+            chooser,
+            textvariable=self.decision_path_var,
+            values=[path["label"] for path in DECISION_PATHS],
+            state="readonly",
+        )
+        self.decision_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.decision_box.bind("<<ComboboxSelected>>", lambda _e: self.refresh_decision_detail())
+        ttk.Button(chooser, text="Show Recommendation", style="Accent.TButton", command=self.refresh_decision_detail).grid(row=0, column=1, sticky="w", padx=10, pady=10)
+
+        detail = self._panel(parent, "Recommended reference path")
+        self.decision_detail_text = tk.Text(detail, height=20)
+        self.decision_detail_text.pack(fill="both", expand=True, padx=10, pady=10)
+        style_text_widget(self.decision_detail_text, self.colors)
+        self.decision_detail_text.configure(state="disabled")
+        actions = ttk.Frame(detail)
+        actions.pack(fill="x", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Open Recommended Playbook", style="Accent.TButton", command=self.open_recommended_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Use Learning Mode", command=lambda: self.open_recommended_playbook(force_mode="Learning / Refresher")).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Use Field Mode", command=lambda: self.open_recommended_playbook(force_mode="Field Reference")).pack(side="left", padx=(0, 8))
+
+        reminder = self._panel(parent, "How to use this")
+        ttk.Label(
+            reminder,
+            text=(
+                "Use Field Reference when you are actively working and need concise order-of-operations reminders. "
+                "Use Learning / Refresher when you have time to slow down and read the deeper explanation layer. "
+                "Neither mode creates case notes or performs analysis."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=10)
+        self.refresh_decision_detail()
 
     def _build_playbook_tab(self, parent):
         top = self._panel(parent, "Current playbook")
@@ -369,6 +426,8 @@ class PlaybooksApp:
         self.sync_current_step_index()
         self.refresh_start_summary()
         self.refresh_review()
+        if hasattr(self, "decision_detail_text"):
+            self.refresh_decision_detail()
 
     def refresh_playbook_header(self):
         pb = self.current_playbook()
@@ -684,6 +743,59 @@ class PlaybooksApp:
         self.sync_current_step_index()
         self.refresh_all()
         self.notebook.select(self.playbook_tab)
+
+    def selected_decision_path(self):
+        label = self.decision_path_var.get() if hasattr(self, "decision_path_var") else ""
+        for path in DECISION_PATHS:
+            if path.get("label") == label:
+                return path
+        return DECISION_PATHS[0] if DECISION_PATHS else None
+
+    def refresh_decision_detail(self):
+        path = self.selected_decision_path()
+        if not path:
+            return
+        playbook = get_playbook(path.get("playbook_id", "")) or {}
+        lines = [
+            path.get("label", ""),
+            "",
+            "Recommended playbook:",
+            f"- {playbook.get('title', path.get('playbook_id', ''))}",
+            "",
+            "Recommended mode:",
+            f"- {path.get('recommended_mode', 'Field Reference')}",
+            "",
+            "Why this path fits:",
+            path.get("why", ""),
+            "",
+            "Quick questions before you continue:",
+        ]
+        lines.extend(f"- {item}" for item in path.get("questions", []))
+        lines.append("")
+        lines.append("First steps this playbook will emphasize:")
+        lines.extend(f"- {item}" for item in path.get("first_steps", []))
+        lines.append("")
+        lines.append("Boundary reminder:")
+        lines.append("Playbooks explains the work. It does not track the case, collect evidence, parse artifacts, or make conclusions.")
+        self.set_text(self.decision_detail_text, "\n".join(lines))
+
+    def open_recommended_playbook(self, force_mode=None):
+        path = self.selected_decision_path()
+        if not path:
+            messagebox.showinfo("No recommendation", "Select a situation first.")
+            return
+        playbook_id = path.get("playbook_id", "")
+        mode = force_mode or path.get("recommended_mode", "Field Reference")
+        try:
+            self.save_current_step_notes()
+            self.session = create_session(playbook_id, mode)
+            self.current_step_index = 1
+            self.mode_var.set(mode)
+            self.sync_current_step_index()
+            self.refresh_all()
+            self.notebook.select(self.playbook_tab)
+        except Exception as exc:
+            messagebox.showerror("Could not open playbook", str(exc))
 
     def browse_output_root(self):
         folder = filedialog.askdirectory(title="Select ByteCase output root")
