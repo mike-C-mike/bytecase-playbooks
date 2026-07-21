@@ -63,7 +63,9 @@ class ScrollableFrame(ttk.Frame):
         self.rowconfigure(0, weight=1)
         self.frame.bind("<Configure>", self._on_frame_configure)
         self.canvas.bind("<Configure>", self._on_canvas_configure)
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
+        self.canvas.bind_all("<Button-4>", self._on_mousewheel, add="+")
+        self.canvas.bind_all("<Button-5>", self._on_mousewheel, add="+")
 
     def _on_frame_configure(self, _event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
@@ -72,19 +74,46 @@ class ScrollableFrame(ttk.Frame):
         self.canvas.itemconfigure(self.window_id, width=event.width)
 
     def _on_mousewheel(self, event):
+        """Scroll this frame when the pointer is over this frame.
+
+        Tkinter has one process-wide ``bind_all`` binding table. Earlier versions of
+        Playbooks registered each ScrollableFrame without ``add="+"``, which meant
+        the last created page could replace the mouse-wheel binding for the earlier
+        pages. This handler is intentionally defensive because the pointer may also be
+        over ttk widgets, pop-down controls, or platform-specific wheel events.
+        """
         try:
             target = self.winfo_containing(event.x_root, event.y_root)
         except Exception:
             return
         if target is None:
             return
+
         try:
             widget = target
+            inside_this_frame = False
             while widget is not None:
                 if widget in (self, self.canvas, self.frame):
-                    self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-                    return
+                    inside_this_frame = True
+                    break
                 widget = getattr(widget, "master", None)
+            if not inside_this_frame:
+                return
+
+            # Windows/macOS report <MouseWheel> with event.delta. X11 reports
+            # wheel movement as Button-4/Button-5 events. Support both.
+            if getattr(event, "num", None) == 4:
+                units = -3
+            elif getattr(event, "num", None) == 5:
+                units = 3
+            else:
+                delta = getattr(event, "delta", 0)
+                if delta == 0:
+                    return
+                units = int(-1 * (delta / 120))
+                if units == 0:
+                    units = -1 if delta > 0 else 1
+            self.canvas.yview_scroll(units, "units")
         except Exception:
             return
 
@@ -2290,4 +2319,3 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
-
