@@ -1,0 +1,54 @@
+{
+  "pack_name": "ByteCase Sample Question Pack",
+  "pack_id": "bytecase-sample-question-pack",
+  "version": "1.0.0",
+  "publisher": "Forensics Byte",
+  "description": "A small example pack showing the downloadable Coach Mode question-pack format.",
+  "license": "Example educational content for ByteCase Playbooks.",
+  "questions": [
+    {
+      "id": "sample-use-context-001",
+      "topic": "Use / Access Context",
+      "difficulty": "Novice",
+      "question": "A login event places a user account on a system near the time of interest. What is the safest interpretation?",
+      "choices": [
+        "The account owner physically performed the action.",
+        "The account activity is relevant context, but human attribution still needs support.",
+        "The event proves intent.",
+        "The login event should be ignored."
+      ],
+      "answer_index": 1,
+      "explanation": "Account activity can be important, but it should be separated from the human actor unless supported by possession, credentials, remote access context, admissions, camera/witness information, or other artifacts.",
+      "follow_up": [
+        "Was the logon local, remote, cached, service-based, or automated?",
+        "Who had possession or credential access at the relevant time?",
+        "What other artifacts corroborate user activity?"
+      ],
+      "guardrail": "A named account is not automatically human-actor proof.",
+      "related_scenario_id": "command_activity_actor",
+      "search_terms": ["account", "login", "actor", "attribution", "possession"]
+    },
+    {
+      "id": "sample-integrity-001",
+      "topic": "Integrity / Hashing",
+      "difficulty": "Experienced",
+      "question": "A rehash months later matches the original hash. What does that support?",
+      "choices": [
+        "The file contents are consistent with the original hashed contents.",
+        "The file is illegal or relevant.",
+        "The file was viewed by a specific person.",
+        "The original collection was automatically complete."
+      ],
+      "answer_index": 0,
+      "explanation": "A matching hash supports integrity of the hashed content. It does not interpret what the file means, who used it, or whether the original collection scope was sufficient.",
+      "follow_up": [
+        "Which hash algorithm was used?",
+        "What exact file or container was hashed?",
+        "Was the original hash documented with tool/version/date/location?"
+      ],
+      "guardrail": "Integrity is not interpretation.",
+      "related_scenario_id": "",
+      "search_terms": ["hash", "integrity", "rehash", "verification"]
+    }
+  ]
+}

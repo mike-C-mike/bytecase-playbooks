@@ -20,7 +20,6 @@ from playbook_data import (
     INVESTIGATIVE_QUESTIONS,
     CONTROL_CONTEXT_PROMPTS,
     SCENARIO_CARDS,
-    COACH_QUESTIONS,
     DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
@@ -31,7 +30,16 @@ from playbook_data import (
     search_artifact_areas,
     search_investigative_questions,
     search_scenario_cards,
+)
+from coach_questions import (
+    BUILT_IN_PACK_NAME,
+    import_question_pack,
+    load_coach_questions,
+    question_pack_directory,
+    question_pack_records,
     search_coach_questions,
+    set_question_pack_enabled,
+    validate_question_pack_file,
 )
 from session_core import create_session, load_session, save_session_outputs, session_summary
 from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
@@ -92,7 +100,8 @@ class PlaybooksApp:
         self.last_export_folder = None
         self.step_check_vars = {}
         self.step_note_widgets = {}
-        self.coach_visible_questions = list(COACH_QUESTIONS)
+        self.coach_questions = load_coach_questions()
+        self.coach_visible_questions = list(self.coach_questions)
         self.current_coach_index = 0
         self.coach_answer_var = tk.IntVar(value=-1)
         self.coach_attempted = 0
@@ -119,6 +128,7 @@ class PlaybooksApp:
         self.artifact_tab = ScrollableFrame(self.notebook, self.colors)
         self.scenario_tab = ScrollableFrame(self.notebook, self.colors)
         self.coach_tab = ScrollableFrame(self.notebook, self.colors)
+        self.question_packs_tab = ScrollableFrame(self.notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
@@ -129,6 +139,7 @@ class PlaybooksApp:
         self.notebook.add(self.artifact_tab, text="Artifact Areas")
         self.notebook.add(self.scenario_tab, text="Scenario Coach")
         self.notebook.add(self.coach_tab, text="Coach Mode")
+        self.notebook.add(self.question_packs_tab, text="Question Packs")
         self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
@@ -139,6 +150,7 @@ class PlaybooksApp:
         self._build_artifact_tab(self.artifact_tab.frame)
         self._build_scenario_tab(self.scenario_tab.frame)
         self._build_coach_tab(self.coach_tab.frame)
+        self._build_question_packs_tab(self.question_packs_tab.frame)
         self._build_reference_tab(self.reference_tab.frame)
         self._build_settings_tab(self.settings_tab.frame)
 
@@ -474,16 +486,23 @@ class PlaybooksApp:
 
         controls = self._panel(parent, "Practice set")
         controls.columnconfigure(1, weight=1)
-        topics = ["All"] + sorted({item.get("topic", "General") for item in COACH_QUESTIONS})
+        pack_names = ["All"] + sorted({item.get("pack_name", BUILT_IN_PACK_NAME) for item in self.coach_questions})
+        topics = ["All"] + sorted({item.get("topic", "General") for item in self.coach_questions})
         difficulties = ["All", "Novice", "Experienced", "Expert"]
         counts = ["All", "5", "10", "15", "20"]
         orders = ["In order", "Shuffle"]
 
-        ttk.Label(controls, text="Topic").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(controls, text="Pack").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.coach_pack_var = tk.StringVar(value="All")
+        self.coach_pack_box = ttk.Combobox(controls, textvariable=self.coach_pack_var, values=pack_names, state="readonly", width=34)
+        self.coach_pack_box.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        self.coach_pack_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+
+        ttk.Label(controls, text="Topic").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
         self.coach_topic_var = tk.StringVar(value="All")
-        topic_box = ttk.Combobox(controls, textvariable=self.coach_topic_var, values=topics, state="readonly", width=32)
-        topic_box.grid(row=0, column=1, sticky="w", padx=10, pady=8)
-        topic_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+        self.coach_topic_box = ttk.Combobox(controls, textvariable=self.coach_topic_var, values=topics, state="readonly", width=34)
+        self.coach_topic_box.grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        self.coach_topic_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
         ttk.Label(controls, text="Difficulty").grid(row=0, column=2, sticky="w", padx=(10, 2), pady=8)
         self.coach_difficulty_var = tk.StringVar(value="All")
@@ -491,16 +510,16 @@ class PlaybooksApp:
         difficulty_box.grid(row=0, column=3, sticky="w", padx=6, pady=8)
         difficulty_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Label(controls, text="Count").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, text="Count").grid(row=1, column=2, sticky="w", padx=(10, 2), pady=(0, 8))
         self.coach_count_var = tk.StringVar(value="10")
         count_box = ttk.Combobox(controls, textvariable=self.coach_count_var, values=counts, state="readonly", width=10)
-        count_box.grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        count_box.grid(row=1, column=3, sticky="w", padx=6, pady=(0, 8))
         count_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Label(controls, text="Order").grid(row=1, column=2, sticky="w", padx=(10, 2), pady=(0, 8))
+        ttk.Label(controls, text="Order").grid(row=2, column=0, sticky="w", padx=10, pady=(0, 8))
         self.coach_order_var = tk.StringVar(value="Shuffle")
         order_box = ttk.Combobox(controls, textvariable=self.coach_order_var, values=orders, state="readonly", width=18)
-        order_box.grid(row=1, column=3, sticky="w", padx=6, pady=(0, 8))
+        order_box.grid(row=2, column=1, sticky="w", padx=10, pady=(0, 8))
         order_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
         ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=4, padx=10, pady=8)
@@ -510,7 +529,7 @@ class PlaybooksApp:
         ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=2, column=4, padx=10, pady=(0, 8))
         ttk.Button(controls, text="Copy Missed", command=self.copy_missed_coach_review).grid(row=2, column=5, padx=10, pady=(0, 8))
         self.coach_score_var = tk.StringVar(value="Score: 0/0")
-        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=2, columnspan=2, sticky="w", padx=10, pady=(0, 8))
 
         qpanel = self._panel(parent, "Question")
         qpanel.columnconfigure(0, weight=1)
@@ -531,6 +550,77 @@ class PlaybooksApp:
         style_text_widget(self.coach_feedback_text, self.colors)
         self.coach_feedback_text.configure(state="disabled")
         self.refresh_coach_question()
+
+
+    def get_coach_questions(self):
+        if not getattr(self, "coach_questions", None):
+            self.coach_questions = load_coach_questions()
+        return self.coach_questions
+
+    def refresh_coach_question_sources(self):
+        self.coach_questions = load_coach_questions()
+        if hasattr(self, "coach_pack_box"):
+            current_pack = self.coach_pack_var.get() if hasattr(self, "coach_pack_var") else "All"
+            current_topic = self.coach_topic_var.get() if hasattr(self, "coach_topic_var") else "All"
+            pack_values = ["All"] + sorted({item.get("pack_name", BUILT_IN_PACK_NAME) for item in self.coach_questions})
+            topic_values = ["All"] + sorted({item.get("topic", "General") for item in self.coach_questions})
+            self.coach_pack_box.configure(values=pack_values)
+            self.coach_topic_box.configure(values=topic_values)
+            if current_pack not in pack_values:
+                self.coach_pack_var.set("All")
+            if current_topic not in topic_values:
+                self.coach_topic_var.set("All")
+        self.start_coach_set()
+
+    def _build_question_packs_tab(self, parent):
+        intro = self._panel(parent, "Question Packs")
+        ttk.Label(
+            intro,
+            text=(
+                "Import downloadable Coach Mode question packs here. Built-in ByteCase questions remain available, "
+                "and imported packs stay local under the ByteCase playbooks question_packs folder."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+        ttk.Label(
+            intro,
+            text="Only import question packs from sources you trust. Packs are educational content and do not replace agency policy, legal authority, formal training, or examiner judgment.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).pack(anchor="w", padx=10, pady=(0, 8))
+
+        actions = self._panel(parent, "Pack actions")
+        ttk.Button(actions, text="Import Question Pack", style="Accent.TButton", command=self.import_question_pack_file).pack(side="left", padx=10, pady=10)
+        ttk.Button(actions, text="Validate Pack File", command=self.validate_question_pack_file_dialog).pack(side="left", padx=(0, 10), pady=10)
+        ttk.Button(actions, text="Enable Selected", command=lambda: self.set_selected_question_pack_enabled(True)).pack(side="left", padx=(0, 10), pady=10)
+        ttk.Button(actions, text="Disable Selected", command=lambda: self.set_selected_question_pack_enabled(False)).pack(side="left", padx=(0, 10), pady=10)
+        ttk.Button(actions, text="Open Pack Folder", command=self.open_question_pack_folder).pack(side="left", padx=(0, 10), pady=10)
+        ttk.Button(actions, text="Refresh", command=self.refresh_question_pack_list).pack(side="left", padx=(0, 10), pady=10)
+
+        body = self._panel(parent, "Installed packs")
+        body.columnconfigure(0, weight=1)
+        body.columnconfigure(1, weight=1)
+        self.question_pack_records = []
+        self.question_pack_tree = ttk.Treeview(body, columns=("enabled", "pack", "version", "questions"), show="headings", height=10)
+        self.question_pack_tree.heading("enabled", text="Enabled")
+        self.question_pack_tree.heading("pack", text="Pack")
+        self.question_pack_tree.heading("version", text="Version")
+        self.question_pack_tree.heading("questions", text="Questions")
+        self.question_pack_tree.column("enabled", width=80, stretch=False)
+        self.question_pack_tree.column("pack", width=360)
+        self.question_pack_tree.column("version", width=110, stretch=False)
+        self.question_pack_tree.column("questions", width=90, stretch=False)
+        self.question_pack_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.question_pack_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_question_pack_detail())
+        self.question_pack_detail_text = tk.Text(body, height=14)
+        self.question_pack_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        style_text_widget(self.question_pack_detail_text, self.colors)
+        self.question_pack_detail_text.configure(state="disabled")
+
+        footer = self._panel(parent, "Pack folder")
+        self.question_pack_folder_var = tk.StringVar(value=str(question_pack_directory()))
+        ttk.Label(footer, textvariable=self.question_pack_folder_var, wraplength=1040, style="Muted.TLabel").pack(anchor="w", padx=10, pady=8)
+        self.refresh_question_pack_list()
 
     def _build_reference_tab(self, parent):
         search_panel = self._panel(parent, "Search playbooks and glossary")
@@ -1158,7 +1248,7 @@ class PlaybooksApp:
             self.reference_results.append({"type": "Question", "title": question.get("question", ""), "data": question})
         for scenario in search_scenario_cards(query):
             self.reference_results.append({"type": "Scenario", "title": scenario.get("title", ""), "data": scenario})
-        for question in search_coach_questions(query):
+        for question in search_coach_questions(query, self.coach_questions):
             self.reference_results.append({"type": "Coach", "title": question.get("question", ""), "data": question})
         self.populate_reference_tree()
         if self.reference_results:
@@ -1201,11 +1291,27 @@ class PlaybooksApp:
         data = result.get("data", {})
         result_type = result.get("type")
         if result_type == "Glossary":
-            lines = [data.get("term", ""), f"Category: {data.get('category', '')}", "", data.get("definition", ""), "", "Related terms:"]
-            lines.extend(f"- {item}" for item in data.get("related", []))
+            lines = [data.get("term", ""), f"Category: {data.get('category', '')}", ""]
+            definition = data.get("plain_language") or data.get("definition", "")
+            lines.append(definition)
+            if data.get("why_it_matters"):
+                lines.extend(["", "Why it matters:", data.get("why_it_matters", "")])
+            if data.get("common_examples"):
+                lines.extend(["", "Common examples:"])
+                lines.extend(f"- {item}" for item in data.get("common_examples", []))
+            if data.get("guardrail"):
+                lines.extend(["", "Guardrail:", data.get("guardrail", "")])
+            if data.get("related"):
+                lines.extend(["", "Related terms:"])
+                lines.extend(f"- {item}" for item in data.get("related", []))
+            if data.get("related_playbooks"):
+                lines.extend(["", "Related playbooks:"])
+                lines.extend(f"- {item}" for item in data.get("related_playbooks", []))
         elif result_type == "Coach":
             lines = [
                 "Coach Question",
+                f"Pack: {data.get('pack_name', '')}",
+                f"Publisher: {data.get('pack_publisher', '')}",
                 f"Topic: {data.get('topic', '')}",
                 f"Difficulty: {data.get('difficulty', '')}",
                 "",
@@ -1367,13 +1473,144 @@ class PlaybooksApp:
         self.notebook.select(self.reference_tab)
         self.run_reference_search()
 
+
+    def refresh_question_pack_list(self):
+        if not hasattr(self, "question_pack_tree"):
+            return
+        self.question_pack_records = question_pack_records(include_disabled=True)
+        for item in self.question_pack_tree.get_children():
+            self.question_pack_tree.delete(item)
+        for idx, record in enumerate(self.question_pack_records):
+            enabled = "Yes" if record.get("enabled") else "No"
+            if record.get("errors"):
+                enabled = "Error"
+            self.question_pack_tree.insert(
+                "",
+                "end",
+                iid=str(idx),
+                values=(enabled, record.get("pack_name", ""), record.get("version", ""), record.get("question_count", 0)),
+            )
+        if self.question_pack_records:
+            self.question_pack_tree.selection_set("0")
+            self.show_question_pack_detail()
+
+    def selected_question_pack_record(self):
+        if not hasattr(self, "question_pack_tree"):
+            return None
+        selection = self.question_pack_tree.selection()
+        if not selection:
+            return None
+        try:
+            return self.question_pack_records[int(selection[0])]
+        except (ValueError, IndexError):
+            return None
+
+    def show_question_pack_detail(self):
+        record = self.selected_question_pack_record()
+        if not record:
+            return
+        lines = [
+            record.get("pack_name", ""),
+            f"Pack ID: {record.get('pack_id', '')}",
+            f"Version: {record.get('version', '')}",
+            f"Publisher: {record.get('publisher', '')}",
+            f"Enabled: {'Yes' if record.get('enabled') else 'No'}",
+            f"Questions: {record.get('question_count', 0)}",
+            "",
+            "Description:",
+            record.get("description", ""),
+            "",
+            "License:",
+            record.get("license", ""),
+        ]
+        if record.get("path"):
+            lines.extend(["", "Local file:", record.get("path", "")])
+        if record.get("warnings"):
+            lines.extend(["", "Warnings:"])
+            lines.extend(f"- {item}" for item in record.get("warnings", []))
+        if record.get("errors"):
+            lines.extend(["", "Errors:"])
+            lines.extend(f"- {item}" for item in record.get("errors", []))
+        self.set_text(self.question_pack_detail_text, "\n".join(lines))
+
+    def import_question_pack_file(self):
+        path = filedialog.askopenfilename(
+            title="Import ByteCase question pack",
+            filetypes=[("JSON question packs", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        result = import_question_pack(Path(path))
+        if not result.get("ok"):
+            messagebox.showerror("Question pack rejected", "\n".join(result.get("errors", ["Unknown validation error."])))
+            return
+        pack = result.get("pack") or {}
+        warning_text = ""
+        if result.get("warnings"):
+            warning_text = "\n\nWarnings:\n" + "\n".join(result.get("warnings", []))
+        messagebox.showinfo(
+            "Question pack imported",
+            f"Imported {pack.get('pack_name', 'question pack')} with {len(result.get('questions', []))} question(s).\n\nSaved to:\n{result.get('destination', '')}{warning_text}",
+        )
+        self.refresh_question_pack_list()
+        self.refresh_coach_question_sources()
+
+    def validate_question_pack_file_dialog(self):
+        path = filedialog.askopenfilename(
+            title="Validate ByteCase question pack",
+            filetypes=[("JSON question packs", "*.json"), ("All files", "*.*")],
+        )
+        if not path:
+            return
+        result = validate_question_pack_file(Path(path))
+        pack = result.get("pack") or {}
+        lines = [
+            "Question Pack Validation",
+            "",
+            f"File: {path}",
+            f"Status: {'OK' if result.get('ok') else 'Rejected'}",
+            f"Pack: {pack.get('pack_name', '')}",
+            f"Version: {pack.get('version', '')}",
+            f"Publisher: {pack.get('publisher', '')}",
+            f"Questions: {len(result.get('questions', []))}",
+        ]
+        if result.get("errors"):
+            lines.extend(["", "Errors:"])
+            lines.extend(f"- {item}" for item in result.get("errors", []))
+        if result.get("warnings"):
+            lines.extend(["", "Warnings:"])
+            lines.extend(f"- {item}" for item in result.get("warnings", []))
+        self.show_text_popup("Question Pack Validation", "\n".join(lines))
+
+    def set_selected_question_pack_enabled(self, enabled):
+        record = self.selected_question_pack_record()
+        if not record:
+            return
+        if record.get("built_in"):
+            messagebox.showinfo("Built-in pack", "Built-in ByteCase questions cannot be disabled from this screen.")
+            return
+        if record.get("errors"):
+            messagebox.showerror("Pack has errors", "This pack has validation errors and cannot be enabled until the file is corrected.")
+            return
+        set_question_pack_enabled(record.get("pack_id", ""), enabled)
+        self.refresh_question_pack_list()
+        self.refresh_coach_question_sources()
+
+    def open_question_pack_folder(self):
+        folder = question_pack_directory()
+        folder.mkdir(parents=True, exist_ok=True)
+        self.open_folder(folder)
+
     def start_coach_set(self):
+        pack = self.coach_pack_var.get() if hasattr(self, "coach_pack_var") else "All"
         topic = self.coach_topic_var.get() if hasattr(self, "coach_topic_var") else "All"
         difficulty = self.coach_difficulty_var.get() if hasattr(self, "coach_difficulty_var") else "All"
         count_value = self.coach_count_var.get() if hasattr(self, "coach_count_var") else "All"
         order_value = self.coach_order_var.get() if hasattr(self, "coach_order_var") else "In order"
 
-        questions = list(COACH_QUESTIONS)
+        questions = list(self.coach_questions)
+        if pack != "All":
+            questions = [item for item in questions if item.get("pack_name", BUILT_IN_PACK_NAME) == pack]
         if topic != "All":
             questions = [item for item in questions if item.get("topic") == topic]
         if difficulty != "All":
@@ -1390,18 +1627,18 @@ class PlaybooksApp:
             except (TypeError, ValueError):
                 pass
 
-        self.coach_visible_questions = questions or list(COACH_QUESTIONS)
+        self.coach_visible_questions = questions or list(self.coach_questions)
         self.current_coach_index = 0
         self.coach_answer_var.set(-1)
         self.coach_attempted = 0
         self.coach_correct = 0
         self.coach_results = {}
-        self.coach_set_label = f"Topic: {topic} | Difficulty: {difficulty} | Count: {count_value} | Order: {order_value}"
+        self.coach_set_label = f"Pack: {pack} | Topic: {topic} | Difficulty: {difficulty} | Count: {count_value} | Order: {order_value}"
         self.refresh_coach_question()
 
     def selected_coach_question(self):
         if not getattr(self, "coach_visible_questions", None):
-            self.coach_visible_questions = list(COACH_QUESTIONS)
+            self.coach_visible_questions = list(self.coach_questions)
         if not self.coach_visible_questions:
             return None
         self.current_coach_index = max(0, min(self.current_coach_index, len(self.coach_visible_questions) - 1))
@@ -1425,7 +1662,7 @@ class PlaybooksApp:
         if prior:
             prior_text = " | Prior: " + ("Correct" if prior.get("correct") else "Missed")
         self.coach_question_var.set(
-            f"Question {self.current_coach_index + 1} of {total} | {item.get('topic', '')} | {item.get('difficulty', '')}{prior_text}\n{item.get('question', '')}"
+            f"Question {self.current_coach_index + 1} of {total} | {item.get('pack_name', '')} | {item.get('topic', '')} | {item.get('difficulty', '')}{prior_text}\n{item.get('question', '')}"
         )
         for idx, choice in enumerate(item.get("choices", [])):
             ttk.Radiobutton(
@@ -1454,6 +1691,8 @@ class PlaybooksApp:
         correct_answer = choices[answer_index] if 0 <= answer_index < len(choices) else ""
         lines = [
             item.get("question", ""),
+            "",
+            f"Pack: {item.get('pack_name', '')} ({item.get('pack_publisher', '')})",
             "",
             "Best answer:",
             f"{answer_index + 1}. {correct_answer}",
@@ -1525,7 +1764,7 @@ class PlaybooksApp:
         missed_items = self.get_missed_coach_questions()
         if missed_items:
             for item in missed_items:
-                lines.append(f"- {item.get('topic', '')} / {item.get('difficulty', '')}: {item.get('question', '')}")
+                lines.append(f"- {item.get('pack_name', '')} / {item.get('topic', '')} / {item.get('difficulty', '')}: {item.get('question', '')}")
         else:
             lines.append("- No missed questions in the current checked set.")
         lines.append("")
@@ -1536,7 +1775,7 @@ class PlaybooksApp:
         missed_ids = {qid for qid, result in getattr(self, "coach_results", {}).items() if not result.get("correct")}
         if not missed_ids:
             return []
-        lookup = {item.get("id", f"index_{idx}"): item for idx, item in enumerate(COACH_QUESTIONS)}
+        lookup = {item.get("id", f"index_{idx}"): item for idx, item in enumerate(self.coach_questions)}
         return [lookup[qid] for qid in missed_ids if qid in lookup]
 
     def show_coach_summary(self):
@@ -1672,3 +1911,4 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
+

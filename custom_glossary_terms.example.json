@@ -1,0 +1,25 @@
+{
+  "terms": [
+    {
+      "term": "Agency Custom Term",
+      "category": "Agency Reference",
+      "definition": "Short definition for a lab-specific term.",
+      "plain_language": "Plain-language explanation for new examiners.",
+      "why_it_matters": "Explain why this term matters in your local workflow.",
+      "common_examples": [
+        "Example 1",
+        "Example 2"
+      ],
+      "guardrail": "Explain what the term does not prove or what should not be overclaimed.",
+      "related": [
+        "Related Term"
+      ],
+      "related_playbooks": [
+        "Related Playbook Title"
+      ],
+      "aliases": [
+        "search alias"
+      ]
+    }
+  ]
+}

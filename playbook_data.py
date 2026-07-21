@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.9.0"
+APP_VERSION = "0.9.2"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -838,119 +838,8 @@ def get_decision_path(path_id):
 
 
 
-from coach_questions import COACH_QUESTIONS, search_coach_questions
-GLOSSARY = [
-    {
-        "term": "Field Reference Mode",
-        "category": "Playbooks",
-        "definition": "A shorter view meant for real-time reference during a task. It emphasizes order, documentation, cautions, and quick reminders.",
-        "related": ["Learning / Refresher Mode", "Step card", "Boundary notice"],
-    },
-    {
-        "term": "Learning / Refresher Mode",
-        "category": "Playbooks",
-        "definition": "A deeper view meant for downtime learning or refreshers before performing less-common work. It expands the why, tools, artifacts, cautions, and documentation reminders.",
-        "related": ["Field Reference Mode", "Step card", "Examiner judgment"],
-    },
-    {
-        "term": "Live acquisition",
-        "category": "Acquisition",
-        "definition": "Collection from a powered-on system. It may preserve volatile state but also changes the system and requires careful documentation and scope control.",
-        "related": ["RAM capture", "Volatile data", "Network isolation", "Encryption context"],
-    },
-    {
-        "term": "Dead-box imaging",
-        "category": "Imaging",
-        "definition": "Preservation of storage media when the device is powered off or the storage media is removed and handled through a controlled imaging process.",
-        "related": ["Write blocker", "Forensic image", "Hash verification"],
-    },
-    {
-        "term": "RAM capture",
-        "category": "Memory",
-        "definition": "Collection of system memory from a live machine. RAM can contain volatile process, connection, command-line, session, and encryption-related context.",
-        "related": ["Volatility", "Volatile data", "Live acquisition"],
-    },
-    {
-        "term": "Volatility",
-        "category": "Memory",
-        "definition": "A memory forensics framework commonly used to examine memory images. Plugin output should be reviewed in context and documented as tool output, not as an automatic conclusion.",
-        "related": ["windows.info", "windows.pslist", "windows.pstree", "windows.netscan", "windows.malfind"],
-    },
-    {
-        "term": "Write blocker",
-        "category": "Preservation",
-        "definition": "A hardware, software, or process control used to reduce or prevent writes to source media during acquisition. Local validation and documentation matter.",
-        "related": ["ByteCase Validate", "Dead-box imaging", "External media"],
-    },
-    {
-        "term": "Hash verification",
-        "category": "Integrity",
-        "definition": "A process for checking whether data matches a previously recorded hash value. Hashes support integrity checks; they do not interpret content or user intent.",
-        "related": ["ByteCase Verify", "SHA-256", "MD5", "Manifest"],
-    },
-    {
-        "term": "Artifact",
-        "category": "Analysis",
-        "definition": "A data item or record that may help answer a forensic question. Artifact presence, absence, or parser output must be interpreted in context.",
-        "related": ["ByteCase Notes", "Artifact index", "Corroboration"],
-    },
-    {
-        "term": "Overclaim",
-        "category": "Reporting",
-        "definition": "A statement that goes beyond what the artifact, tool output, or available context supports. Playbooks should help examiners document observations without overstating conclusions.",
-        "related": ["Limitations", "Corroboration", "Examiner judgment"],
-    },
-
-    {
-        "term": "Corroboration",
-        "category": "Analysis",
-        "definition": "The practice of checking whether an observation is supported by another artifact, source, timestamp, log, tool output, or case context before relying on it heavily.",
-        "related": ["Overclaim", "Limitations", "Artifact"],
-    },
-    {
-        "term": "Limitations",
-        "category": "Reporting",
-        "definition": "Known boundaries of the tool, data source, extraction type, parser support, authority, or examiner process. Limitations should be documented instead of hidden.",
-        "related": ["Overclaim", "Tool validation", "Unsupported app"],
-    },
-    {
-        "term": "Volatile data",
-        "category": "Memory",
-        "definition": "Data that can change or disappear quickly, especially on a powered-on system. Examples may include RAM, running processes, active network connections, logged-in users, and mounted volumes.",
-        "related": ["Live acquisition", "RAM capture", "Memory analysis"],
-    },
-    {
-        "term": "Forensic image",
-        "category": "Acquisition",
-        "definition": "A documented acquisition of storage media or selected data created for later examination. The image format, tool, verification result, and limitations should be recorded.",
-        "related": ["Dead-box imaging", "Hash verification", "Write blocker"],
-    },
-    {
-        "term": "Command example",
-        "category": "Playbooks",
-        "definition": "A sample command or tool action shown as a learning/reference prompt. Commands must be adapted to the examiner's tool path, image name, case scope, agency policy, and operating environment.",
-        "related": ["Volatility", "Documentation", "Limitations"],
-    },
-    {
-        "term": "Does not prove",
-        "category": "Reporting",
-        "definition": "A guardrail reminder that a tool result or artifact can support a lead without proving attribution, intent, or a final conclusion by itself.",
-        "related": ["Overclaim", "Corroboration", "Limitations"],
-    },
-
-    {
-        "term": "Device-use context",
-        "category": "Attribution",
-        "definition": "Information that helps evaluate who may have had access to or control over a device, account, session, or action. Examples can include password knowledge, possession, account ownership, logged-in sessions, admissions, and corroborating physical or witness context.",
-        "related": ["Actor vs. artifact", "Corroboration", "Overclaim"],
-    },
-    {
-        "term": "Actor vs. artifact",
-        "category": "Attribution",
-        "definition": "A reminder to separate what a digital artifact shows from who performed the related human action. A command, file access trace, or login artifact may support activity, but the human actor usually requires additional context.",
-        "related": ["Device-use context", "Does not prove", "Limitations"],
-    },
-]
+from coach_questions import COACH_QUESTIONS, load_coach_questions, search_coach_questions
+from glossary import GLOSSARY_TERMS as GLOSSARY, search_glossary
 
 def search_playbooks(query):
     needle = (query or "").strip().lower()
@@ -968,18 +857,6 @@ def search_playbooks(query):
         haystack = "\n".join(str(part) for part in haystack_parts).lower()
         if needle in haystack:
             results.append(playbook)
-    return results
-
-
-def search_glossary(query):
-    needle = (query or "").strip().lower()
-    if not needle:
-        return []
-    results = []
-    for item in GLOSSARY:
-        haystack = "\n".join([item.get("term", ""), item.get("category", ""), item.get("definition", ""), "\n".join(item.get("related", []))]).lower()
-        if needle in haystack:
-            results.append(item)
     return results
 
 

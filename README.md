@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.9.0
+v0.9.1
 
 ## Purpose
 
@@ -44,9 +44,9 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.9.0 updates
+## v0.9.1 updates
 
-v0.9.0 expands Coach Mode into a more useful drill workflow.
+v0.9.1 expands Coach Mode into a more useful drill workflow.
 
 Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
 
@@ -206,9 +206,9 @@ Coach Mode now supports three examiner experience levels for each major realm:
 The intent is to let a new examiner start safely while giving a more practiced examiner deeper scenario questions without turning Playbooks into a certification exam or case-tracking tool.
 
 
-## v0.9.0 question-pack organization
+## v0.9.1 question-pack organization
 
-v0.9.0 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
+v0.9.1 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
 
 Question pack foundation:
 
@@ -227,3 +227,81 @@ coach_questions/
 ```
 
 Each pack exposes a `QUESTIONS` list. The package loader combines them into `COACH_QUESTIONS` for the existing Coach Mode interface.
+
+
+## v0.9.1 glossary repository refactor
+
+The glossary now lives in a dedicated `glossary/` package organized by topic. This keeps `playbook_data.py` focused on playbooks, scenarios, artifact areas, and decision helpers while allowing the glossary to grow into a larger examiner reference repository.
+
+The Coach question loader and Glossary loader both include custom JSON hooks for future Add/Edit/Remove screens:
+
+- `custom_coach_questions.json` or `ByteCase/playbooks/custom/coach_questions.json`
+- `custom_glossary_terms.json` or `ByteCase/playbooks/custom/glossary_terms.json`
+
+This is groundwork for future user-modifiable reference packs without another major refactor.
+
+Example starter files are included:
+
+- `custom_glossary_terms.example.json`
+- `custom_coach_questions.example.json`
+
+Copy either file to the matching live filename when future editable/custom pack support is needed.
+
+
+## v0.9.2 Question Pack Import Foundation
+
+v0.9.2 adds a first-pass downloadable Coach Mode question-pack system.
+
+New capabilities:
+
+- Added a dedicated **Question Packs** tab
+- Added JSON question-pack validation
+- Added local import into `ByteCase/playbooks/question_packs/`
+- Added installed-pack listing with metadata, version, publisher, question count, warnings, and errors
+- Added enable/disable support for imported packs
+- Added Coach Mode pack filtering alongside topic, difficulty, count, and order
+- Added `sample_question_pack.json` as a downloadable-pack template
+- Updated Coach Mode and Reference search to include imported pack questions
+
+Built-in ByteCase questions remain available and cannot be disabled from the Question Packs tab. Imported packs are treated as separate educational content. Only import packs from trusted sources.
+
+### Question pack format
+
+A pack is a JSON file with metadata and a `questions` list:
+
+```json
+{
+  "pack_name": "Use and Access Context Fundamentals",
+  "pack_id": "use-access-context-fundamentals",
+  "version": "1.0.0",
+  "publisher": "Forensics Byte",
+  "description": "Questions focused on careful interpretation of user access, account activity, possession, and attribution context.",
+  "license": "Forensics Byte educational content",
+  "questions": []
+}
+```
+
+Each question uses the same structure as the built-in Coach Mode questions:
+
+```json
+{
+  "id": "use-context-001",
+  "topic": "Use / Access Context",
+  "difficulty": "Novice",
+  "question": "A command appears in a console history artifact. What can you safely say?",
+  "choices": [
+    "The suspect typed the command.",
+    "The command appears to have been recorded or executed in that environment.",
+    "The named account holder performed the action.",
+    "The command proves intent."
+  ],
+  "answer_index": 1,
+  "explanation": "The artifact may support command activity, but it does not independently identify the human actor.",
+  "follow_up": [
+    "What possession, login, password, account, admission, or corroborating context would help?"
+  ],
+  "guardrail": "Device activity should be separated from human actor attribution unless supported by additional context.",
+  "search_terms": ["command", "actor", "attribution"]
+}
+```
+

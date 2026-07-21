@@ -1,24 +1,43 @@
-# Coach Question Packs
+# Coach Questions
 
-Coach Mode questions are organized by topic. Each module exposes a `QUESTIONS` list containing question dictionaries.
+Built-in Coach Mode questions live in this package as topic-based Python modules.
 
-Required fields for each question:
+Runtime imported question packs are loaded from:
 
-```python
-{
-    "id": "unique_question_id",
-    "topic": "Use / Access Context",
-    "difficulty": "Novice",
-    "question": "Question text",
-    "choices": ["A", "B", "C", "D"],
-    "answer_index": 1,
-    "explanation": "Why the answer is best",
-    "follow_up": ["Follow-up prompt"],
-    "guardrail": "Does-not-prove reminder",
-    "related_playbook_id": "windows_artifact_review_refresher",
-    "related_scenario_id": "command_activity_actor",
-    "search_terms": ["actor", "attribution"]
-}
+```text
+ByteCase/playbooks/question_packs/
 ```
 
-To add a new pack, create a module in this folder, define `QUESTIONS`, then import and extend it in `__init__.py`.
+Imported packs are JSON files. They are validated before import and can be enabled or disabled from the Question Packs tab.
+
+## Built-in topic modules
+
+- `use_access_context.py`
+- `memory_ram.py`
+- `windows_file_activity.py`
+- `browser_file_activity.py`
+- `external_media.py`
+- `integrity_hashing.py`
+- `mobile.py`
+- `timestamps.py`
+- `validation_tool_confidence.py`
+
+Each built-in module exposes a `QUESTIONS` list. The package loader combines built-in questions with enabled imported JSON packs.
+
+## Runtime question pack folder
+
+```text
+ByteCase/playbooks/question_packs/
+```
+
+Settings for enabling or disabling packs are stored in:
+
+```text
+ByteCase/playbooks/question_packs/question_pack_settings.json
+```
+
+## Guidance
+
+Built-in questions should stay conservative, generally useful, and Forensics Byte curated.
+
+Imported packs are a good path for downloadable training material, agency-specific refreshers, and future topic releases from the website.
