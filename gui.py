@@ -20,6 +20,7 @@ from playbook_data import (
     INVESTIGATIVE_QUESTIONS,
     CONTROL_CONTEXT_PROMPTS,
     SCENARIO_CARDS,
+    SCENARIO_COACHING_QUESTIONS,
     DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
@@ -30,6 +31,7 @@ from playbook_data import (
     search_artifact_areas,
     search_investigative_questions,
     search_scenario_cards,
+    search_scenario_coaching_questions,
 )
 from coach_questions import (
     BUILT_IN_PACK_NAME,
@@ -118,17 +120,16 @@ class PlaybooksApp:
         ttk.Label(header, text=APP_SUBTITLE, style="Muted.TLabel").pack(anchor="w")
         ttk.Label(header, text=APP_ATTRIBUTION, style="Muted.TLabel").pack(anchor="w")
 
+
         self.notebook = ttk.Notebook(self.root)
         self.notebook.pack(fill="both", expand=True, padx=14, pady=(0, 12))
 
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
         self.workbench_tab = ttk.Frame(self.notebook)
-        self.practice_tab = ttk.Frame(self.notebook)
         self.library_tab = ttk.Frame(self.notebook)
 
         self.notebook.add(self.start_tab, text="Home")
-        self.notebook.add(self.workbench_tab, text="Reference")
-        self.notebook.add(self.practice_tab, text="Practice")
+        self.notebook.add(self.workbench_tab, text="Workbench")
         self.notebook.add(self.library_tab, text="Library")
 
         self.workbench_notebook = ttk.Notebook(self.workbench_tab)
@@ -137,25 +138,22 @@ class PlaybooksApp:
         self.playbook_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.artifact_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.scenario_tab = ScrollableFrame(self.workbench_notebook, self.colors)
+        self.coach_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.workbench_notebook.add(self.decision_tab, text="Guide")
         self.workbench_notebook.add(self.playbook_tab, text="Playbook")
         self.workbench_notebook.add(self.artifact_tab, text="Artifacts")
-        self.workbench_notebook.add(self.scenario_tab, text="Scenarios")
-
-        self.practice_notebook = ttk.Notebook(self.practice_tab)
-        self.practice_notebook.pack(fill="both", expand=True)
-        self.coach_tab = ScrollableFrame(self.practice_notebook, self.colors)
-        self.question_packs_tab = ScrollableFrame(self.practice_notebook, self.colors)
-        self.practice_notebook.add(self.coach_tab, text="Drills")
-        self.practice_notebook.add(self.question_packs_tab, text="Packs")
+        self.workbench_notebook.add(self.scenario_tab, text="Coaching")
+        self.workbench_notebook.add(self.coach_tab, text="Drills")
 
         self.library_notebook = ttk.Notebook(self.library_tab)
         self.library_notebook.pack(fill="both", expand=True)
         self.session_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.library_notebook, self.colors)
+        self.question_packs_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.library_notebook.add(self.session_tab, text="Save / Export")
         self.library_notebook.add(self.reference_tab, text="Search")
+        self.library_notebook.add(self.question_packs_tab, text="Question Packs")
         self.library_notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
@@ -194,12 +192,12 @@ class PlaybooksApp:
         self.workbench_notebook.select(self.scenario_tab)
 
     def show_coach_page(self):
-        self.notebook.select(self.practice_tab)
-        self.practice_notebook.select(self.coach_tab)
+        self.notebook.select(self.workbench_tab)
+        self.workbench_notebook.select(self.coach_tab)
 
     def show_question_packs_page(self):
-        self.notebook.select(self.practice_tab)
-        self.practice_notebook.select(self.question_packs_tab)
+        self.notebook.select(self.library_tab)
+        self.library_notebook.select(self.question_packs_tab)
 
     def show_session_page(self):
         self.notebook.select(self.library_tab)
@@ -230,9 +228,9 @@ class PlaybooksApp:
         lanes.columnconfigure(1, weight=1)
         lanes.columnconfigure(2, weight=1)
         path_items = [
-            ("Reference", "Use Guide, Playbook steps, Artifacts, or Scenarios while thinking through a process.", self.show_guide_page),
-            ("Practice", "Run Coach drills or manage downloaded question packs.", self.show_coach_page),
-            ("Library", "Save/export sessions, search the reference library, or adjust settings.", self.show_session_page),
+            ("Workbench", "Use Guide, Playbooks, Artifacts, Coaching, and Drills from one focused work area.", self.show_guide_page),
+            ("Practice Drills", "Run Coach drills, review missed questions, and strengthen examiner judgment.", self.show_coach_page),
+            ("Library", "Save/export sessions, search reference content, manage question packs, or adjust settings.", self.show_session_page),
         ]
         for idx, (title, desc, command) in enumerate(path_items):
             card = ttk.Frame(lanes, style="Panel.TFrame")
@@ -276,7 +274,7 @@ class PlaybooksApp:
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save / Export", command=self.show_session_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Artifacts", command=self.show_artifact_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Scenarios", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Coaching", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Drills", command=self.show_coach_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Search", command=self.show_reference_page).pack(side="left", padx=(0, 8))
 
@@ -432,110 +430,135 @@ class PlaybooksApp:
         ttk.Button(actions, text="New Session", command=self.new_session).pack(side="right", padx=(8, 0))
 
     def _build_artifact_tab(self, parent):
-        intro = self._panel(parent, "Artifact Area Navigator")
+        intro = self._panel(parent, "Artifact Decision Helper")
         ttk.Label(
             intro,
             text=(
-                "Use this section when you know the question or artifact family and need a fast refresher. "
-                "It explains what an area may help answer, where to look, tools that may apply, and what not to overclaim."
+                "Start with the question you are trying to answer. Select the situation and the examiner question, "
+                "then review artifact areas that may help, where those artifacts may be found, and common tools or methods used to collect or examine them."
             ),
             wraplength=1040,
         ).pack(anchor="w", padx=10, pady=(8, 4))
         ttk.Label(
             intro,
-            text="This is reference guidance only. It does not identify a suspect, perform analysis, or replace corroboration and examiner judgment.",
+            text=(
+                "Tool names are examples of commonly used industry tools or methods, not endorsements, recommendations, "
+                "or validation statements. Validate tools locally and follow agency policy."
+            ),
             wraplength=1040,
             style="Muted.TLabel",
         ).pack(anchor="w", padx=10, pady=(0, 8))
-
-        chooser = self._panel(parent, "Artifact areas")
-        chooser.columnconfigure(0, weight=1)
-        chooser.columnconfigure(1, weight=2)
-        self.artifact_category_var = tk.StringVar(value="All")
-        categories = ["All"] + sorted({item.get("category", "") for item in ARTIFACT_AREAS})
-        self.artifact_category_box = ttk.Combobox(chooser, textvariable=self.artifact_category_var, values=categories, state="readonly", width=24)
-        self.artifact_category_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
-        self.artifact_category_box.bind("<<ComboboxSelected>>", lambda _e: self.populate_artifact_area_list())
-        self.artifact_area_list = tk.Listbox(chooser, height=8, exportselection=False)
-        self.artifact_area_list.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        self.artifact_area_list.bind("<<ListboxSelect>>", lambda _e: self.show_artifact_area_detail())
-        chooser.rowconfigure(0, weight=1)
-
-        detail = self._panel(parent, "Artifact guidance")
-        self.artifact_detail_text = tk.Text(detail, height=18)
-        self.artifact_detail_text.pack(fill="both", expand=True, padx=10, pady=10)
-        style_text_widget(self.artifact_detail_text, self.colors)
-        self.artifact_detail_text.configure(state="disabled")
-        actions = ttk.Frame(detail)
-        actions.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Copy Guidance", command=self.copy_artifact_guidance).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Search This", command=self.search_selected_artifact_area).pack(side="left", padx=(0, 8))
 
         helper = self._panel(parent, "What are you trying to understand?")
-        helper.columnconfigure(0, weight=1)
-        helper.columnconfigure(1, weight=2)
-        self.question_var = tk.StringVar(value=INVESTIGATIVE_QUESTIONS[0]["question"] if INVESTIGATIVE_QUESTIONS else "")
-        self.question_box = ttk.Combobox(helper, textvariable=self.question_var, values=[item["question"] for item in INVESTIGATIVE_QUESTIONS], state="readonly")
-        self.question_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        helper.columnconfigure(1, weight=1)
+        ttk.Label(helper, text="Situation").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 4))
+        self.artifact_situation_var = tk.StringVar(value="Dead-box laptop exam")
+        situations = self.artifact_situation_values()
+        self.artifact_situation_box = ttk.Combobox(helper, textvariable=self.artifact_situation_var, values=situations, state="readonly", width=36)
+        self.artifact_situation_box.grid(row=0, column=1, sticky="ew", padx=10, pady=(10, 4))
+        self.artifact_situation_box.bind("<<ComboboxSelected>>", lambda _e: self.refresh_artifact_questions())
+
+        ttk.Label(helper, text="Question").grid(row=1, column=0, sticky="w", padx=10, pady=(4, 10))
+        self.question_var = tk.StringVar()
+        self.question_box = ttk.Combobox(helper, textvariable=self.question_var, values=[], state="readonly")
+        self.question_box.grid(row=1, column=1, sticky="ew", padx=10, pady=(4, 10))
         self.question_box.bind("<<ComboboxSelected>>", lambda _e: self.show_question_detail())
-        self.question_detail_text = tk.Text(helper, height=16)
-        self.question_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+
+        self.question_detail_text = tk.Text(helper, height=20)
+        self.question_detail_text.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
         style_text_widget(self.question_detail_text, self.colors)
         self.question_detail_text.configure(state="disabled")
-        helper.rowconfigure(0, weight=1)
+        helper.rowconfigure(2, weight=1)
         q_actions = ttk.Frame(helper)
-        q_actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
-        ttk.Button(q_actions, text="Copy Question Guidance", command=self.copy_question_guidance).pack(side="left", padx=(0, 8))
+        q_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(q_actions, text="Copy Guidance", command=self.copy_question_guidance).pack(side="left", padx=(0, 8))
         ttk.Button(q_actions, text="Use / Access Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
 
-        self.populate_artifact_area_list()
-        self.show_question_detail()
+        detail = self._panel(parent, "Artifact area detail")
+        detail.columnconfigure(0, weight=1)
+        detail.columnconfigure(1, weight=2)
+        self.artifact_area_list = tk.Listbox(detail, height=8, exportselection=False)
+        self.artifact_area_list.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.artifact_area_list.bind("<<ListboxSelect>>", lambda _e: self.show_artifact_area_detail())
+        self.artifact_detail_text = tk.Text(detail, height=16)
+        self.artifact_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        style_text_widget(self.artifact_detail_text, self.colors)
+        self.artifact_detail_text.configure(state="disabled")
+        detail.rowconfigure(0, weight=1)
+        actions = ttk.Frame(detail)
+        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        ttk.Button(actions, text="Copy Artifact Detail", command=self.copy_artifact_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search This", command=self.search_selected_artifact_area).pack(side="left", padx=(0, 8))
+
+        self.refresh_artifact_questions()
 
     def _build_scenario_tab(self, parent):
-        intro = self._panel(parent, "Scenario Coach")
+        intro = self._panel(parent, "Coaching")
         ttk.Label(
             intro,
             text=(
-                "Use this section when an examiner has a common investigative question and needs help thinking through "
-                "what an artifact may show, what extra context may matter, and what not to overclaim."
+                "Use Coaching when you want a mentoring-examiner style question path. "
+                "Answer each step without seeing the result, then review the full path at the end. "
+                "The goal is examiner mindset, not trivia."
             ),
             wraplength=1040,
         ).pack(anchor="w", padx=10, pady=(8, 4))
         ttk.Label(
             intro,
-            text="This is a reference and learning aid. It does not identify a person, make a finding, or replace interviews, corroboration, policy, or examiner judgment.",
+            text="This is not a tabletop exercise, certification test, finding generator, or substitute for agency policy. It is a structured coaching aid for careful forensic thinking.",
             wraplength=1040,
             style="Muted.TLabel",
         ).pack(anchor="w", padx=10, pady=(0, 8))
 
-        body = self._panel(parent, "Common scenarios")
-        body.columnconfigure(0, weight=1)
-        body.columnconfigure(1, weight=2)
-        body.rowconfigure(0, weight=1)
-        self.scenario_list = tk.Listbox(body, height=12, exportselection=False)
-        self.scenario_list.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
-        self.scenario_list.bind("<<ListboxSelect>>", lambda _e: self.show_scenario_detail())
-        self.scenario_detail_text = tk.Text(body, height=22)
-        self.scenario_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
-        style_text_widget(self.scenario_detail_text, self.colors)
-        self.scenario_detail_text.configure(state="disabled")
-        actions = ttk.Frame(body)
-        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Copy Guidance", command=self.copy_scenario_guidance).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Open Related Playbook", command=self.open_scenario_playbook).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Search Terms", command=self.search_scenario_terms).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Use / Access Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
+        selector = self._panel(parent, "Coaching path")
+        selector.columnconfigure(1, weight=1)
+        ttk.Label(selector, text="Path").grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        self.coaching_prompt_var = tk.StringVar(value=SCENARIO_COACHING_QUESTIONS[0]["title"] if SCENARIO_COACHING_QUESTIONS else "")
+        self.coaching_prompt_box = ttk.Combobox(selector, textvariable=self.coaching_prompt_var, values=[item["title"] for item in SCENARIO_COACHING_QUESTIONS], state="readonly")
+        self.coaching_prompt_box.grid(row=0, column=1, sticky="ew", padx=10, pady=10)
+        self.coaching_prompt_box.bind("<<ComboboxSelected>>", lambda _e: self.begin_coaching_path())
+        ttk.Button(selector, text="Start / Reset Path", command=self.begin_coaching_path).grid(row=0, column=2, padx=10, pady=10)
+        ttk.Button(selector, text="Next Path", command=self.next_coaching_prompt).grid(row=0, column=3, padx=10, pady=10)
+
+        context = self._panel(parent, "Scenario context")
+        self.coaching_context_var = tk.StringVar()
+        ttk.Label(context, textvariable=self.coaching_context_var, wraplength=1040).pack(anchor="w", padx=10, pady=10)
+
+        qpanel = self._panel(parent, "Mentor question")
+        qpanel.columnconfigure(0, weight=1)
+        self.coaching_progress_var = tk.StringVar(value="Question 1")
+        ttk.Label(qpanel, textvariable=self.coaching_progress_var, style="Muted.TLabel").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 2))
+        self.coaching_question_var = tk.StringVar()
+        ttk.Label(qpanel, textvariable=self.coaching_question_var, wraplength=1040, font=("Segoe UI", 11, "bold")).grid(row=1, column=0, sticky="w", padx=10, pady=(2, 6))
+        self.coaching_answer_var = tk.IntVar(value=-1)
+        self.coaching_choice_frame = ttk.Frame(qpanel)
+        self.coaching_choice_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 6))
+
+        actions = ttk.Frame(qpanel)
+        actions.grid(row=3, column=0, sticky="ew", padx=10, pady=(2, 10))
+        ttk.Button(actions, text="Previous", command=self.previous_coaching_step).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Record / Next", style="Accent.TButton", command=self.check_coaching_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Finish & Review", command=self.show_coaching_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Copy Review", command=self.copy_coaching_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Open Related Playbook", command=self.open_coaching_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search Terms", command=self.search_coaching_terms).pack(side="left", padx=(0, 8))
+
+        detail = self._panel(parent, "Path status / final review")
+        self.coaching_feedback_text = tk.Text(detail, height=22)
+        self.coaching_feedback_text.pack(fill="both", expand=True, padx=10, pady=10)
+        style_text_widget(self.coaching_feedback_text, self.colors)
+        self.coaching_feedback_text.configure(state="disabled")
 
         mindset = self._panel(parent, "Core mindset")
         ttk.Label(
             mindset,
             text=(
-                "Separate the artifact from the actor. First describe what the data source supports. Then identify what other context may support access, control, possession, session activity, admission, or corroboration. "
-                "Avoid turning a tool result into a human-action conclusion unless the supporting context is documented."
+                "During a coaching path, the app records your choices without revealing the best answer. "
+                "At the end, review the full chain: what the artifact supports, what context is missing, what alternatives exist, and what language avoids overclaiming."
             ),
             wraplength=1040,
         ).pack(anchor="w", padx=10, pady=10)
-        self.populate_scenario_list()
+        self.begin_coaching_path()
 
     def _build_coach_tab(self, parent):
         intro = self._panel(parent, "Coach Mode")
@@ -543,7 +566,7 @@ class PlaybooksApp:
             intro,
             text=(
                 "Use Coach Mode for quick examiner-thinking practice. It is designed as a refresher and learning aid: "
-                "read the scenario, choose the safest answer, then review the explanation and follow-up questions."
+                "read the prompt, choose the safest answer, then review the explanation and follow-up questions."
             ),
             wraplength=1040,
         ).pack(anchor="w", padx=10, pady=(8, 4))
@@ -596,7 +619,7 @@ class PlaybooksApp:
         ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=5, padx=10, pady=8)
         ttk.Button(controls, text="Review Missed", command=self.review_missed_coach_questions).grid(row=1, column=4, padx=10, pady=(0, 8))
         ttk.Button(controls, text="Summary", command=self.show_coach_summary).grid(row=1, column=5, padx=10, pady=(0, 8))
-        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=2, column=4, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Open Coaching", command=self.open_coach_scenario).grid(row=2, column=4, padx=10, pady=(0, 8))
         ttk.Button(controls, text="Copy Missed", command=self.copy_missed_coach_review).grid(row=2, column=5, padx=10, pady=(0, 8))
         self.coach_score_var = tk.StringVar(value="Score: 0/0")
         ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=2, columnspan=2, sticky="w", padx=10, pady=(0, 8))
@@ -1187,17 +1210,94 @@ class PlaybooksApp:
         self.sync_current_step_index()
         self.refresh_all()
 
+    def artifact_situation_values(self):
+        preferred_order = [
+            "Dead-box laptop exam",
+            "Powered-on computer / live system",
+            "BitLocker-enabled laptop",
+            "Memory/RAM review",
+            "Mobile device review",
+            "External media review",
+            "Browser/download review",
+            "Shared device or shared account",
+            "Cloud sync review",
+            "Possible remote access or automation",
+            "File movement question",
+        ]
+        values = []
+        for value in preferred_order:
+            if any(value in item.get("situations", []) for item in INVESTIGATIVE_QUESTIONS):
+                values.append(value)
+        for item in INVESTIGATIVE_QUESTIONS:
+            for value in item.get("situations", []):
+                if value != "Any situation" and value not in values:
+                    values.append(value)
+        return values or ["General review"]
+
+    def questions_for_situation(self, situation):
+        exact_matches = [
+            item for item in INVESTIGATIVE_QUESTIONS
+            if situation in item.get("situations", [])
+        ]
+        if exact_matches:
+            return exact_matches
+        any_matches = [
+            item for item in INVESTIGATIVE_QUESTIONS
+            if "Any situation" in item.get("situations", [])
+        ]
+        return any_matches or list(INVESTIGATIVE_QUESTIONS)
+
+    def refresh_artifact_questions(self):
+        if not hasattr(self, "question_box"):
+            return
+        situation = self.artifact_situation_var.get() if hasattr(self, "artifact_situation_var") else ""
+        questions = self.questions_for_situation(situation)
+        labels = [item.get("question", "") for item in questions]
+        self.visible_investigative_questions = questions
+        self.question_box.configure(values=labels)
+        if labels and self.question_var.get() not in labels:
+            self.question_var.set(labels[0])
+        elif not labels:
+            self.question_var.set("")
+        self.show_question_detail()
+
+    def artifact_area_by_id(self, artifact_id):
+        for item in ARTIFACT_AREAS:
+            if item.get("id") == artifact_id:
+                return item
+        return None
+
+    def artifact_areas_for_question(self, question):
+        if not question:
+            return []
+        areas = []
+        seen = set()
+        for artifact_id in question.get("related_artifact_ids", []):
+            area = self.artifact_area_by_id(artifact_id)
+            if area and area.get("id") not in seen:
+                areas.append(area)
+                seen.add(area.get("id"))
+        if areas:
+            return areas
+        related = [value.lower() for value in question.get("related_artifacts", [])]
+        for area in ARTIFACT_AREAS:
+            label = f"{area.get('category', '')} - {area.get('title', '')}".lower()
+            if any(value in label or area.get("title", "").lower() in value for value in related):
+                areas.append(area)
+        return areas or list(ARTIFACT_AREAS)
+
     def populate_artifact_area_list(self):
         if not hasattr(self, "artifact_area_list"):
             return
         self.artifact_area_list.delete(0, tk.END)
-        selected = self.artifact_category_var.get()
-        self.visible_artifact_areas = [item for item in ARTIFACT_AREAS if selected == "All" or item.get("category") == selected]
+        self.visible_artifact_areas = self.artifact_areas_for_question(self.selected_question())
         for item in self.visible_artifact_areas:
             self.artifact_area_list.insert(tk.END, f"{item.get('category', '')} - {item.get('title', '')}")
         if self.visible_artifact_areas:
             self.artifact_area_list.selection_set(0)
             self.show_artifact_area_detail()
+        elif hasattr(self, "artifact_detail_text"):
+            self.set_text(self.artifact_detail_text, "No artifact areas mapped for this question yet.")
 
     def selected_artifact_area(self):
         if not hasattr(self, "artifact_area_list"):
@@ -1227,6 +1327,9 @@ class PlaybooksApp:
         lines.append("Common tools / methods:")
         lines.extend(f"- {value}" for value in item.get("tools", []))
         lines.append("")
+        lines.append("Reminder:")
+        lines.append("- Tool names are common examples only, not endorsements, recommendations, or validation statements.")
+        lines.append("")
         lines.append("Guardrails / does not prove:")
         lines.extend(f"- {value}" for value in item.get("cautions", []))
         lines.append("")
@@ -1238,7 +1341,8 @@ class PlaybooksApp:
         return "\n".join(lines)
 
     def show_artifact_area_detail(self):
-        self.set_text(self.artifact_detail_text, self.format_artifact_area(self.selected_artifact_area()))
+        if hasattr(self, "artifact_detail_text"):
+            self.set_text(self.artifact_detail_text, self.format_artifact_area(self.selected_artifact_area()))
 
     def copy_artifact_guidance(self):
         self.copy_to_clipboard(self.format_artifact_area(self.selected_artifact_area()), "Artifact guidance")
@@ -1253,37 +1357,228 @@ class PlaybooksApp:
 
     def selected_question(self):
         text = self.question_var.get() if hasattr(self, "question_var") else ""
+        candidates = getattr(self, "visible_investigative_questions", None) or INVESTIGATIVE_QUESTIONS
+        for item in candidates:
+            if item.get("question") == text:
+                return item
         for item in INVESTIGATIVE_QUESTIONS:
             if item.get("question") == text:
                 return item
-        return INVESTIGATIVE_QUESTIONS[0] if INVESTIGATIVE_QUESTIONS else None
+        return candidates[0] if candidates else (INVESTIGATIVE_QUESTIONS[0] if INVESTIGATIVE_QUESTIONS else None)
 
     def format_question_guidance(self, item):
         if not item:
             return "No question selected."
+        situation = self.artifact_situation_var.get() if hasattr(self, "artifact_situation_var") else "Any situation"
+        areas = self.artifact_areas_for_question(item)
         lines = [
-            item.get("question", ""),
+            f"Situation: {situation}",
+            f"Question: {item.get('question', '')}",
             "",
-            "Mindset:",
+            "Examiner mindset:",
             item.get("mindset", ""),
             "",
-            "Look at:",
+            "Decision factors / look at:",
         ]
         lines.extend(f"- {value}" for value in item.get("look_at", []))
+        lines.append("")
+        lines.append("Mapped artifact areas:")
+        for area in areas:
+            lines.append(f"- {area.get('category', '')} - {area.get('title', '')}")
+            lines.append(f"  May help answer: {area.get('helps_answer', '')}")
+            if area.get("where_to_look"):
+                lines.append("  Where to look: " + "; ".join(area.get("where_to_look", [])[:4]))
+            if area.get("tools"):
+                lines.append("  Common tools/methods: " + "; ".join(area.get("tools", [])[:4]))
         lines.append("")
         lines.append("Guardrails:")
         lines.extend(f"- {value}" for value in item.get("guardrails", []))
         lines.append("")
-        lines.append("Related artifact areas / playbooks:")
-        lines.extend(f"- {value}" for value in item.get("related_artifacts", []))
+        lines.append("Tool note:")
+        lines.append("- Tool names are examples of commonly used industry tools or methods, not endorsements, recommendations, or validation statements.")
         return "\n".join(lines)
 
     def show_question_detail(self):
         if hasattr(self, "question_detail_text"):
             self.set_text(self.question_detail_text, self.format_question_guidance(self.selected_question()))
+        self.populate_artifact_area_list()
 
     def copy_question_guidance(self):
         self.copy_to_clipboard(self.format_question_guidance(self.selected_question()), "Question guidance")
+
+    def selected_coaching_prompt(self):
+        title = self.coaching_prompt_var.get() if hasattr(self, "coaching_prompt_var") else ""
+        for item in SCENARIO_COACHING_QUESTIONS:
+            if item.get("title") == title:
+                return item
+        return SCENARIO_COACHING_QUESTIONS[0] if SCENARIO_COACHING_QUESTIONS else None
+
+    def coaching_steps(self):
+        item = self.selected_coaching_prompt() or {}
+        return item.get("steps", []) or []
+
+    def begin_coaching_path(self):
+        self.coaching_step_index = 0
+        self.coaching_answers = {}
+        self.coaching_review_complete = False
+        self.refresh_coaching_step()
+
+    def refresh_coaching_prompt(self):
+        self.begin_coaching_path()
+
+    def refresh_coaching_step(self):
+        item = self.selected_coaching_prompt()
+        steps = self.coaching_steps()
+        if not item or not steps or not hasattr(self, "coaching_choice_frame"):
+            return
+        if not hasattr(self, "coaching_step_index"):
+            self.coaching_step_index = 0
+        self.coaching_step_index = max(0, min(self.coaching_step_index, len(steps) - 1))
+        step = steps[self.coaching_step_index]
+        self.coaching_context_var.set(item.get("opening_context", item.get("summary", "")))
+        self.coaching_progress_var.set(f"Question {self.coaching_step_index + 1} of {len(steps)}")
+        self.coaching_question_var.set(step.get("prompt", ""))
+        selected = getattr(self, "coaching_answers", {}).get(step.get("id", str(self.coaching_step_index)), -1)
+        self.coaching_answer_var.set(selected)
+        for child in self.coaching_choice_frame.winfo_children():
+            child.destroy()
+        for idx, choice in enumerate(step.get("choices", [])):
+            rb = ttk.Radiobutton(self.coaching_choice_frame, text=choice, value=idx, variable=self.coaching_answer_var)
+            rb.pack(anchor="w", padx=2, pady=2)
+        remaining = len(steps) - len(getattr(self, "coaching_answers", {}))
+        self.set_text(
+            self.coaching_feedback_text,
+            (
+                "Answer this question, then click Record / Next. The best answer and coaching explanation will stay hidden until Finish & Review.\n\n"
+                f"Path: {item.get('title', '')}\n"
+                f"Category: {item.get('category', '')}\n"
+                f"Recorded answers: {len(getattr(self, 'coaching_answers', {}))} of {len(steps)}\n"
+                f"Remaining: {max(0, remaining)}"
+            ),
+        )
+
+    def next_coaching_prompt(self):
+        if not SCENARIO_COACHING_QUESTIONS:
+            return
+        current = self.selected_coaching_prompt()
+        idx = SCENARIO_COACHING_QUESTIONS.index(current) if current in SCENARIO_COACHING_QUESTIONS else 0
+        idx = (idx + 1) % len(SCENARIO_COACHING_QUESTIONS)
+        self.coaching_prompt_var.set(SCENARIO_COACHING_QUESTIONS[idx].get("title", ""))
+        self.begin_coaching_path()
+
+    def previous_coaching_step(self):
+        steps = self.coaching_steps()
+        if not steps:
+            return
+        if not hasattr(self, "coaching_step_index"):
+            self.coaching_step_index = 0
+        self.coaching_step_index = max(0, self.coaching_step_index - 1)
+        self.refresh_coaching_step()
+
+    def check_coaching_answer(self):
+        item = self.selected_coaching_prompt()
+        steps = self.coaching_steps()
+        selected = self.coaching_answer_var.get() if hasattr(self, "coaching_answer_var") else -1
+        if not item or not steps:
+            return
+        if selected < 0:
+            messagebox.showinfo("Choose a response", "Select the best response first.")
+            return
+        if not hasattr(self, "coaching_step_index"):
+            self.coaching_step_index = 0
+        step = steps[self.coaching_step_index]
+        if not hasattr(self, "coaching_answers"):
+            self.coaching_answers = {}
+        step_id = step.get("id", str(self.coaching_step_index))
+        self.coaching_answers[step_id] = selected
+        if self.coaching_step_index < len(steps) - 1:
+            self.coaching_step_index += 1
+            self.refresh_coaching_step()
+        else:
+            self.set_text(
+                self.coaching_feedback_text,
+                "Last answer recorded. Click Finish & Review to see the full coaching review."
+            )
+
+    def format_coaching_guidance(self, item=None, selected_index=None, reveal_only=False):
+        # Compatibility wrapper used by older copy/open handlers.
+        return self.format_coaching_review()
+
+    def format_coaching_review(self):
+        item = self.selected_coaching_prompt()
+        steps = self.coaching_steps()
+        if not item or not steps:
+            return "No coaching path selected."
+        answers = getattr(self, "coaching_answers", {})
+        lines = [
+            item.get("title", ""),
+            f"Category: {item.get('category', '')}",
+            "",
+            "Scenario context:",
+            item.get("opening_context", item.get("summary", "")),
+            "",
+            "Coaching review:",
+        ]
+        correct = 0
+        for idx, step in enumerate(steps):
+            step_id = step.get("id", str(idx))
+            selected = answers.get(step_id, -1)
+            best = int(step.get("best_index", 0))
+            choices = step.get("choices", [])
+            if selected == best:
+                correct += 1
+            lines.append("")
+            lines.append(f"Question {idx + 1}: {step.get('prompt', '')}")
+            lines.append("Your response: " + (choices[selected] if 0 <= selected < len(choices) else "No response recorded"))
+            lines.append("Best response: " + (choices[best] if 0 <= best < len(choices) else "Not specified"))
+            lines.append("Result: " + ("Aligned with the safer response" if selected == best else "Review the coaching note"))
+            lines.append("Why: " + step.get("explanation", ""))
+            if step.get("coaching_note"):
+                lines.append("Mentor note: " + step.get("coaching_note", ""))
+        lines.append("")
+        lines.append(f"Path score: {correct} of {len(steps)} safer responses")
+        lines.append("")
+        lines.append("Bigger-picture debrief:")
+        lines.append(item.get("debrief", item.get("bigger_picture", "")))
+        lines.append("")
+        lines.append("Reference terms:")
+        lines.extend(f"- {value}" for value in item.get("related_reference_terms", []))
+        lines.append("")
+        lines.append("Boundary reminder:")
+        lines.append("- Coaching paths are readiness prompts. They do not produce findings, replace policy, or prove investigative conclusions.")
+        return "\n".join(lines)
+
+    def show_coaching_answer(self):
+        self.coaching_review_complete = True
+        self.set_text(self.coaching_feedback_text, self.format_coaching_review())
+
+    def copy_coaching_guidance(self):
+        self.copy_to_clipboard(self.format_coaching_review(), "Coaching review")
+
+    def open_coaching_playbook(self):
+        item = self.selected_coaching_prompt()
+        if not item:
+            return
+        playbook_id = item.get("related_playbook_id", "")
+        try:
+            self.save_current_step_notes()
+            self.session = create_session(playbook_id, self.mode_var.get())
+            self.current_step_index = 1
+            self.sync_current_step_index()
+            self.refresh_all()
+            self.show_playbook_page()
+        except Exception as exc:
+            messagebox.showerror("Could not open playbook", str(exc))
+
+    def search_coaching_terms(self):
+        item = self.selected_coaching_prompt()
+        if not item:
+            return
+        terms = item.get("related_reference_terms", [])
+        query = terms[0] if terms else item.get("title", "")
+        self.reference_query_var.set(query)
+        self.show_reference_page()
+        self.run_reference_search()
 
     def format_use_context_prompts(self):
         lines = [
@@ -1318,6 +1613,8 @@ class PlaybooksApp:
             self.reference_results.append({"type": "Question", "title": question.get("question", ""), "data": question})
         for scenario in search_scenario_cards(query):
             self.reference_results.append({"type": "Scenario", "title": scenario.get("title", ""), "data": scenario})
+        for coaching in search_scenario_coaching_questions(query):
+            self.reference_results.append({"type": "Coaching", "title": coaching.get("title", ""), "data": coaching})
         for question in search_coach_questions(query, self.coach_questions):
             self.reference_results.append({"type": "Coach", "title": question.get("question", ""), "data": question})
         self.populate_reference_tree()
@@ -1432,6 +1729,19 @@ class PlaybooksApp:
                 "Guardrails:",
             ]
             lines.extend(f"- {item}" for item in data.get("guardrails", []))
+        elif result_type == "Coaching":
+            lines = [
+                data.get("title", ""),
+                f"Category: {data.get('category', '')}",
+                "",
+                "Scenario context:",
+                data.get("opening_context", data.get("summary", "")),
+                "",
+                "Question path:",
+            ]
+            for idx, step in enumerate(data.get("steps", []), start=1):
+                lines.append(f"{idx}. {step.get('prompt', '')}")
+            lines.extend(["", "Bigger-picture debrief:", data.get("debrief", "")])
         else:
             lines = [data.get("title", ""), f"Category: {data.get('category', '')}", f"Level: {data.get('level', '')}", "", data.get("summary", ""), "", "Use when:"]
             lines.extend(f"- {item}" for item in data.get("use_when", []))
@@ -1450,7 +1760,7 @@ class PlaybooksApp:
     def open_reference_playbook(self):
         result = self.selected_reference_result()
         if not result or result.get("type") != "Playbook":
-            messagebox.showinfo("No playbook selected", "Select a Playbook result first. Artifact, Question, and Scenario results are reference-only here.")
+            messagebox.showinfo("No playbook selected", "Select a Playbook result first. Artifact, Question, Scenario, Coaching, and Coach results are reference-only here.")
             return
         playbook = result.get("data", {})
         self.save_current_step_notes()
@@ -1893,19 +2203,18 @@ class PlaybooksApp:
         item = self.selected_coach_question()
         if not item:
             return
+        # Coach Mode questions may link to older scenario-card IDs or newer coaching prompts.
         scenario_id = item.get("related_scenario_id", "")
-        for idx, scenario in enumerate(SCENARIO_CARDS):
-            if scenario.get("id") == scenario_id:
+        for coaching in SCENARIO_COACHING_QUESTIONS:
+            if coaching.get("id") == scenario_id or coaching.get("category") == item.get("topic"):
                 self.show_scenario_page()
-                try:
-                    self.scenario_list.selection_clear(0, tk.END)
-                    self.scenario_list.selection_set(idx)
-                    self.scenario_list.see(idx)
-                    self.show_scenario_detail()
-                except Exception:
-                    pass
+                if hasattr(self, "coaching_prompt_var"):
+                    self.coaching_prompt_var.set(coaching.get("title", ""))
+                    self.refresh_coaching_prompt()
                 return
-        messagebox.showinfo("No scenario linked", "This coach question does not have a linked Scenario Coach card yet.")
+        self.show_scenario_page()
+        messagebox.showinfo("Coaching", "Opened the Coaching lane. This question does not have a one-to-one coaching prompt yet.")
+
 
     def selected_decision_path(self):
         label = self.decision_path_var.get() if hasattr(self, "decision_path_var") else ""
@@ -1981,3 +2290,4 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
+

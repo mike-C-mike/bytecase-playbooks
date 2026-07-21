@@ -26,6 +26,7 @@ from .timestamps import QUESTIONS as TIMESTAMPS_QUESTIONS
 from .use_access_context import QUESTIONS as USE_ACCESS_CONTEXT_QUESTIONS
 from .validation_tool_confidence import QUESTIONS as VALIDATION_TOOL_CONFIDENCE_QUESTIONS
 from .windows_file_activity import QUESTIONS as WINDOWS_FILE_ACTIVITY_QUESTIONS
+from .coaching_paths import COACHING_PATHS, search_coaching_paths
 
 ALLOWED_DIFFICULTIES = ["Novice", "Experienced", "Expert"]
 MAX_PACK_BYTES = 2 * 1024 * 1024
