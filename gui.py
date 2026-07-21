@@ -93,8 +93,8 @@ class PlaybooksApp:
         self.settings = load_settings()
         self.colors = apply_theme(root, self.settings)
         self.root.title(f"{APP_NAME} v{APP_VERSION}")
-        self.root.geometry("1200x780")
-        self.root.minsize(1080, 700)
+        self.root.geometry("1180x760")
+        self.root.minsize(1060, 680)
         self.session = create_session(PLAYBOOKS[0]["id"], self.settings.get("defaults", {}).get("mode", "Field Reference"))
         self.current_step_index = 1
         self.last_export_folder = None
@@ -124,14 +124,12 @@ class PlaybooksApp:
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
         self.workbench_tab = ttk.Frame(self.notebook)
         self.practice_tab = ttk.Frame(self.notebook)
-        self.session_tab = ScrollableFrame(self.notebook, self.colors)
         self.library_tab = ttk.Frame(self.notebook)
 
-        self.notebook.add(self.start_tab, text="Start")
-        self.notebook.add(self.workbench_tab, text="Reference Workbench")
-        self.notebook.add(self.practice_tab, text="Practice Drills")
-        self.notebook.add(self.session_tab, text="Session Export")
-        self.notebook.add(self.library_tab, text="Library / Settings")
+        self.notebook.add(self.start_tab, text="Home")
+        self.notebook.add(self.workbench_tab, text="Reference")
+        self.notebook.add(self.practice_tab, text="Practice")
+        self.notebook.add(self.library_tab, text="Library")
 
         self.workbench_notebook = ttk.Notebook(self.workbench_tab)
         self.workbench_notebook.pack(fill="both", expand=True)
@@ -139,23 +137,25 @@ class PlaybooksApp:
         self.playbook_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.artifact_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.scenario_tab = ScrollableFrame(self.workbench_notebook, self.colors)
-        self.workbench_notebook.add(self.decision_tab, text="Guide Me")
+        self.workbench_notebook.add(self.decision_tab, text="Guide")
         self.workbench_notebook.add(self.playbook_tab, text="Playbook")
-        self.workbench_notebook.add(self.artifact_tab, text="Artifact Areas")
-        self.workbench_notebook.add(self.scenario_tab, text="Scenario Coach")
+        self.workbench_notebook.add(self.artifact_tab, text="Artifacts")
+        self.workbench_notebook.add(self.scenario_tab, text="Scenarios")
 
         self.practice_notebook = ttk.Notebook(self.practice_tab)
         self.practice_notebook.pack(fill="both", expand=True)
         self.coach_tab = ScrollableFrame(self.practice_notebook, self.colors)
         self.question_packs_tab = ScrollableFrame(self.practice_notebook, self.colors)
-        self.practice_notebook.add(self.coach_tab, text="Coach Mode")
-        self.practice_notebook.add(self.question_packs_tab, text="Question Packs")
+        self.practice_notebook.add(self.coach_tab, text="Drills")
+        self.practice_notebook.add(self.question_packs_tab, text="Packs")
 
         self.library_notebook = ttk.Notebook(self.library_tab)
         self.library_notebook.pack(fill="both", expand=True)
+        self.session_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.library_notebook, self.colors)
-        self.library_notebook.add(self.reference_tab, text="Reference Library")
+        self.library_notebook.add(self.session_tab, text="Save / Export")
+        self.library_notebook.add(self.reference_tab, text="Search")
         self.library_notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
@@ -202,7 +202,8 @@ class PlaybooksApp:
         self.practice_notebook.select(self.question_packs_tab)
 
     def show_session_page(self):
-        self.notebook.select(self.session_tab)
+        self.notebook.select(self.library_tab)
+        self.library_notebook.select(self.session_tab)
 
     def show_reference_page(self):
         self.notebook.select(self.library_tab)
@@ -228,12 +229,10 @@ class PlaybooksApp:
         lanes.columnconfigure(0, weight=1)
         lanes.columnconfigure(1, weight=1)
         lanes.columnconfigure(2, weight=1)
-        lanes.columnconfigure(3, weight=1)
         path_items = [
-            ("Reference Workbench", "Use Guide Me, Playbook steps, Artifact Areas, or Scenario Coach while thinking through a process.", self.show_guide_page),
-            ("Practice Drills", "Run Coach Mode questions or manage downloaded question packs.", self.show_coach_page),
-            ("Session Export", "Save a non-case Playbooks refresher session as JSON, TXT, or DOCX.", self.show_session_page),
-            ("Library / Settings", "Search terms and references, or adjust local settings.", self.show_reference_page),
+            ("Reference", "Use Guide, Playbook steps, Artifacts, or Scenarios while thinking through a process.", self.show_guide_page),
+            ("Practice", "Run Coach drills or manage downloaded question packs.", self.show_coach_page),
+            ("Library", "Save/export sessions, search the reference library, or adjust settings.", self.show_session_page),
         ]
         for idx, (title, desc, command) in enumerate(path_items):
             card = ttk.Frame(lanes, style="Panel.TFrame")
@@ -275,11 +274,11 @@ class PlaybooksApp:
         ttk.Button(actions, text="Continue", command=self.show_playbook_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Guide Me", command=self.show_guide_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Save Session", command=self.show_session_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Artifact Areas", command=self.show_artifact_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Scenario Coach", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Coach Mode", command=self.show_coach_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Reference", command=self.show_reference_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save / Export", command=self.show_session_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Artifacts", command=self.show_artifact_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Scenarios", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Drills", command=self.show_coach_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search", command=self.show_reference_page).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
         intro = self._panel(parent, "Guide Me")

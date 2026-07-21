@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.9.3
+v0.9.4
 
 ## Purpose
 
@@ -32,38 +32,44 @@ It is not the same as ByteCase Workflow.
 - **ByteCase Playbooks explains and reinforces the work.**
 - **ByteCase Workflow tracks the work.**
 
-## v0.9.3 updates
+## v0.9.4 updates
 
-v0.9.3 is a navigation consolidation sprint. It reduces top-level tab bloat and groups related tools into clearer lanes.
+v0.9.4 is a navigation simplification sprint. It keeps the v0.9.3 grouping but tightens the top-level menu further.
 
 Top-level navigation is now organized as:
 
-- **Start**
-- **Reference Workbench**
-- **Practice Drills**
-- **Session Export**
-- **Library / Settings**
+- **Home**
+- **Reference**
+- **Practice**
+- **Library**
 
-The older individual tabs are preserved as grouped sub-tabs:
+### Reference
 
-### Reference Workbench
+Reference contains the active workbench areas:
 
-- Guide Me
+- Guide
 - Playbook
-- Artifact Areas
-- Scenario Coach
+- Artifacts
+- Scenarios
 
-### Practice Drills
+### Practice
 
-- Coach Mode
-- Question Packs
+Practice contains the readiness and training areas:
 
-### Library / Settings
+- Drills
+- Packs
 
-- Reference Library
+### Library
+
+Library contains supporting areas that should not compete with the main workflow:
+
+- Save / Export
+- Search
 - Settings
 
-This keeps Playbooks focused as a reference and readiness product without removing current functionality.
+Session saving/export is no longer a top-level lane. It now lives under Library as **Save / Export**, which keeps Playbooks focused around three primary user paths: reference, practice, and library/support.
+
+Scope remains unchanged: Playbooks is a non-case reference and readiness tool. It does not create case notes, track case progress, perform forensic analysis, or produce investigative findings.
 
 ## Current built-in playbooks
 
