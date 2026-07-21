@@ -100,22 +100,65 @@ class ScrollableFrame(ttk.Frame):
             if not inside_this_frame:
                 return
 
-            # Windows/macOS report <MouseWheel> with event.delta. X11 reports
-            # wheel movement as Button-4/Button-5 events. Support both.
-            if getattr(event, "num", None) == 4:
-                units = -3
-            elif getattr(event, "num", None) == 5:
-                units = 3
-            else:
-                delta = getattr(event, "delta", 0)
-                if delta == 0:
-                    return
-                units = int(-1 * (delta / 120))
-                if units == 0:
-                    units = -1 if delta > 0 else 1
+            units = _wheel_units(event)
+            if units == 0:
+                return
             self.canvas.yview_scroll(units, "units")
         except Exception:
             return
+
+
+def _wheel_units(event):
+    """Return cross-platform wheel units for Tkinter wheel events."""
+    if getattr(event, "num", None) == 4:
+        return -3
+    if getattr(event, "num", None) == 5:
+        return 3
+    delta = getattr(event, "delta", 0)
+    if delta == 0:
+        return 0
+    units = int(-1 * (delta / 120))
+    if units == 0:
+        units = -1 if delta > 0 else 1
+    return units
+
+
+def bind_inner_mousewheel(widget):
+    """Let inner scrollable widgets keep wheel control while hovered.
+
+    The page container uses a global wheel binding so the outer page scrolls even
+    when focus is inside another widget. Multi-line Text/Listbox/Treeview widgets
+    also need wheel scrolling for their own content. This binding scrolls the
+    hovered inner widget first and returns ``break`` while the widget can still
+    move. At the top or bottom edge, the event is allowed to bubble so the outer
+    page can continue scrolling naturally.
+    """
+    def _on_inner_mousewheel(event):
+        units = _wheel_units(event)
+        if units == 0:
+            return None
+        try:
+            first, last = widget.yview()
+        except Exception:
+            return None
+
+        # Negative units scroll up. Positive units scroll down. When the inner
+        # widget is already at that edge, allow the page-level binding to handle
+        # the event instead of trapping the wheel.
+        if units < 0 and first <= 0.0:
+            return None
+        if units > 0 and last >= 1.0:
+            return None
+        try:
+            widget.yview_scroll(units, "units")
+            return "break"
+        except Exception:
+            return None
+
+    widget.bind("<MouseWheel>", _on_inner_mousewheel, add="+")
+    widget.bind("<Button-4>", _on_inner_mousewheel, add="+")
+    widget.bind("<Button-5>", _on_inner_mousewheel, add="+")
+
 
 
 class PlaybooksApp:
@@ -280,6 +323,7 @@ class PlaybooksApp:
         self.playbook_list = tk.Listbox(selector, height=8, exportselection=False)
         self.playbook_list.grid(row=1, column=1, sticky="nsew", padx=10, pady=(0, 8))
         self.playbook_list.bind("<<ListboxSelect>>", lambda _e: self.preview_selected_playbook())
+        bind_inner_mousewheel(self.playbook_list)
         selector.rowconfigure(1, weight=1)
         buttons = ttk.Frame(selector)
         buttons.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 8))
@@ -291,6 +335,7 @@ class PlaybooksApp:
         self.preview_text = tk.Text(preview, height=12)
         self.preview_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.preview_text, self.colors)
+        bind_inner_mousewheel(self.preview_text)
         self.preview_text.configure(state="disabled")
 
         quick = self._panel(parent, "Current playbook session")
@@ -339,6 +384,7 @@ class PlaybooksApp:
         self.decision_detail_text = tk.Text(detail, height=20)
         self.decision_detail_text.pack(fill="both", expand=True, padx=10, pady=10)
         style_text_widget(self.decision_detail_text, self.colors)
+        bind_inner_mousewheel(self.decision_detail_text)
         self.decision_detail_text.configure(state="disabled")
         actions = ttk.Frame(detail)
         actions.pack(fill="x", padx=10, pady=(0, 10))
@@ -377,6 +423,7 @@ class PlaybooksApp:
         self.steps_tree.column("title", width=760)
         self.steps_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.steps_tree.bind("<<TreeviewSelect>>", lambda _e: self.select_tree_step())
+        bind_inner_mousewheel(self.steps_tree)
         nav_buttons = ttk.Frame(nav)
         nav_buttons.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
         ttk.Button(nav_buttons, text="Previous", command=self.previous_step).pack(side="left", padx=(0, 8))
@@ -418,6 +465,7 @@ class PlaybooksApp:
         self.detail_text = tk.Text(detail, height=16)
         self.detail_text.pack(fill="both", expand=True, padx=10, pady=10)
         style_text_widget(self.detail_text, self.colors)
+        bind_inner_mousewheel(self.detail_text)
         self.detail_text.configure(state="disabled")
 
         notes = self._panel(parent, "Your notes for this step")
@@ -430,6 +478,7 @@ class PlaybooksApp:
         self.step_notes_text = tk.Text(notes, height=5)
         self.step_notes_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.step_notes_text, self.colors)
+        bind_inner_mousewheel(self.step_notes_text)
         self.step_notes_text.bind("<FocusOut>", lambda _e: self.save_current_step_notes())
         self.step_notes_text.bind("<KeyRelease>", lambda _e: self.mark_dirty_step_notes())
 
@@ -449,6 +498,7 @@ class PlaybooksApp:
         self.review_text = tk.Text(review, height=14)
         self.review_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.review_text, self.colors)
+        bind_inner_mousewheel(self.review_text)
         self.review_text.configure(state="disabled")
         actions = ttk.Frame(review)
         actions.pack(fill="x", padx=10, pady=(0, 10))
@@ -496,6 +546,7 @@ class PlaybooksApp:
         self.question_detail_text = tk.Text(helper, height=20)
         self.question_detail_text.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
         style_text_widget(self.question_detail_text, self.colors)
+        bind_inner_mousewheel(self.question_detail_text)
         self.question_detail_text.configure(state="disabled")
         helper.rowconfigure(2, weight=1)
         q_actions = ttk.Frame(helper)
@@ -509,9 +560,11 @@ class PlaybooksApp:
         self.artifact_area_list = tk.Listbox(detail, height=8, exportselection=False)
         self.artifact_area_list.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.artifact_area_list.bind("<<ListboxSelect>>", lambda _e: self.show_artifact_area_detail())
+        bind_inner_mousewheel(self.artifact_area_list)
         self.artifact_detail_text = tk.Text(detail, height=16)
         self.artifact_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         style_text_widget(self.artifact_detail_text, self.colors)
+        bind_inner_mousewheel(self.artifact_detail_text)
         self.artifact_detail_text.configure(state="disabled")
         detail.rowconfigure(0, weight=1)
         actions = ttk.Frame(detail)
@@ -576,6 +629,7 @@ class PlaybooksApp:
         self.coaching_feedback_text = tk.Text(detail, height=22)
         self.coaching_feedback_text.pack(fill="both", expand=True, padx=10, pady=10)
         style_text_widget(self.coaching_feedback_text, self.colors)
+        bind_inner_mousewheel(self.coaching_feedback_text)
         self.coaching_feedback_text.configure(state="disabled")
 
         mindset = self._panel(parent, "Core mindset")
@@ -670,6 +724,7 @@ class PlaybooksApp:
         self.coach_feedback_text = tk.Text(detail, height=18)
         self.coach_feedback_text.pack(fill="x", padx=10, pady=10)
         style_text_widget(self.coach_feedback_text, self.colors)
+        bind_inner_mousewheel(self.coach_feedback_text)
         self.coach_feedback_text.configure(state="disabled")
         self.refresh_coach_question()
 
@@ -734,9 +789,11 @@ class PlaybooksApp:
         self.question_pack_tree.column("questions", width=90, stretch=False)
         self.question_pack_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.question_pack_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_question_pack_detail())
+        bind_inner_mousewheel(self.question_pack_tree)
         self.question_pack_detail_text = tk.Text(body, height=14)
         self.question_pack_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         style_text_widget(self.question_pack_detail_text, self.colors)
+        bind_inner_mousewheel(self.question_pack_detail_text)
         self.question_pack_detail_text.configure(state="disabled")
 
         footer = self._panel(parent, "Pack folder")
@@ -768,9 +825,11 @@ class PlaybooksApp:
         self.reference_tree.column("title", width=360)
         self.reference_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         self.reference_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_reference_result())
+        bind_inner_mousewheel(self.reference_tree)
         self.reference_detail_text = tk.Text(body, height=18)
         self.reference_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
         style_text_widget(self.reference_detail_text, self.colors)
+        bind_inner_mousewheel(self.reference_detail_text)
         self.reference_detail_text.configure(state="disabled")
         actions = ttk.Frame(body)
         actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
@@ -1097,6 +1156,7 @@ class PlaybooksApp:
         text = tk.Text(win, height=20)
         text.pack(fill="both", expand=True, padx=12, pady=8)
         style_text_widget(text, self.colors)
+        bind_inner_mousewheel(text)
         text.insert("1.0", body)
         text.configure(state="disabled")
         ttk.Button(win, text="Close", command=win.destroy).pack(anchor="e", padx=12, pady=(0, 12))
