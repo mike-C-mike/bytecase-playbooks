@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.8.1
+v0.8.2
 
 ## Purpose
 
@@ -44,9 +44,9 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.8.1 updates
+## v0.8.2 updates
 
-v0.8.1 adds the first **Coach Mode** foundation.
+v0.8.2 adds the first **Coach Mode** foundation.
 
 Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
 
@@ -186,3 +186,26 @@ Coach Mode now supports three examiner experience levels for each major realm:
 - **Expert** - ambiguity handling, conflicting artifacts, source limitations, and stronger corroboration questions.
 
 The intent is to let a new examiner start safely while giving a more practiced examiner deeper scenario questions without turning Playbooks into a certification exam or case-tracking tool.
+
+
+## v0.8.2 question-pack organization
+
+v0.8.2 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
+
+Question pack foundation:
+
+```text
+coach_questions/
+  __init__.py
+  browser_file_activity.py
+  external_media.py
+  integrity_hashing.py
+  memory_ram.py
+  mobile.py
+  timestamps.py
+  use_access_context.py
+  validation_tool_confidence.py
+  windows_file_activity.py
+```
+
+Each pack exposes a `QUESTIONS` list. The package loader combines them into `COACH_QUESTIONS` for the existing Coach Mode interface.
