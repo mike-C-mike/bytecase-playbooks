@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.8.0
+v0.8.1
 
 ## Purpose
 
@@ -44,9 +44,9 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.8.0 updates
+## v0.8.1 updates
 
-v0.8.0 adds the first **Coach Mode** foundation.
+v0.8.1 adds the first **Coach Mode** foundation.
 
 Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
 
@@ -176,3 +176,13 @@ Add Playbooks Coach Mode foundation
 ```text
 Adds a Coach Mode tab with starter examiner-thinking questions, topic filtering, answer checking, explanations, follow-up prompts, guardrails, Scenario Coach shortcuts, and reference-search integration. Coach Mode reinforces attribution caution, documentation habits, and overclaim guardrails while preserving Playbooks as a non-case reference and refresher tool.
 ```
+
+## Coach difficulty levels
+
+Coach Mode now supports three examiner experience levels for each major realm:
+
+- **Novice** - baseline safety, vocabulary, and overclaim prevention.
+- **Experienced** - context-building, source comparison, and documentation judgment.
+- **Expert** - ambiguity handling, conflicting artifacts, source limitations, and stronger corroboration questions.
+
+The intent is to let a new examiner start safely while giving a more practiced examiner deeper scenario questions without turning Playbooks into a certification exam or case-tracking tool.

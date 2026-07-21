@@ -472,16 +472,25 @@ class PlaybooksApp:
         controls = self._panel(parent, "Practice set")
         controls.columnconfigure(1, weight=1)
         topics = ["All"] + sorted({item.get("topic", "General") for item in COACH_QUESTIONS})
+        difficulties = ["All", "Novice", "Experienced", "Expert"]
+
         ttk.Label(controls, text="Topic").grid(row=0, column=0, sticky="w", padx=10, pady=8)
         self.coach_topic_var = tk.StringVar(value="All")
         topic_box = ttk.Combobox(controls, textvariable=self.coach_topic_var, values=topics, state="readonly", width=32)
         topic_box.grid(row=0, column=1, sticky="w", padx=10, pady=8)
         topic_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
-        ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=3, padx=10, pady=8)
-        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=0, column=4, padx=10, pady=8)
+
+        ttk.Label(controls, text="Difficulty").grid(row=0, column=2, sticky="w", padx=(10, 2), pady=8)
+        self.coach_difficulty_var = tk.StringVar(value="All")
+        difficulty_box = ttk.Combobox(controls, textvariable=self.coach_difficulty_var, values=difficulties, state="readonly", width=18)
+        difficulty_box.grid(row=0, column=3, sticky="w", padx=6, pady=8)
+        difficulty_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+
+        ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=4, padx=10, pady=8)
+        ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=5, padx=10, pady=8)
+        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=1, column=4, padx=10, pady=(0, 8))
         self.coach_score_var = tk.StringVar(value="Score: 0/0")
-        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=1, column=1, columnspan=4, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
 
         qpanel = self._panel(parent, "Question")
         qpanel.columnconfigure(0, weight=1)
@@ -1340,12 +1349,15 @@ class PlaybooksApp:
 
     def start_coach_set(self):
         topic = self.coach_topic_var.get() if hasattr(self, "coach_topic_var") else "All"
-        if topic == "All":
-            self.coach_visible_questions = list(COACH_QUESTIONS)
-        else:
-            self.coach_visible_questions = [item for item in COACH_QUESTIONS if item.get("topic") == topic]
-        if not self.coach_visible_questions:
-            self.coach_visible_questions = list(COACH_QUESTIONS)
+        difficulty = self.coach_difficulty_var.get() if hasattr(self, "coach_difficulty_var") else "All"
+
+        questions = list(COACH_QUESTIONS)
+        if topic != "All":
+            questions = [item for item in questions if item.get("topic") == topic]
+        if difficulty != "All":
+            questions = [item for item in questions if item.get("difficulty") == difficulty]
+
+        self.coach_visible_questions = questions or list(COACH_QUESTIONS)
         self.current_coach_index = 0
         self.coach_answer_var.set(-1)
         self.coach_attempted = 0
