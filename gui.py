@@ -1,6 +1,7 @@
 """Tkinter GUI for ByteCase Playbooks."""
 import json
 import os
+import random
 import subprocess
 import sys
 import tkinter as tk
@@ -96,6 +97,8 @@ class PlaybooksApp:
         self.coach_answer_var = tk.IntVar(value=-1)
         self.coach_attempted = 0
         self.coach_correct = 0
+        self.coach_results = {}
+        self.coach_set_label = "All Questions"
         self._build_ui()
         self.refresh_all()
 
@@ -473,6 +476,8 @@ class PlaybooksApp:
         controls.columnconfigure(1, weight=1)
         topics = ["All"] + sorted({item.get("topic", "General") for item in COACH_QUESTIONS})
         difficulties = ["All", "Novice", "Experienced", "Expert"]
+        counts = ["All", "5", "10", "15", "20"]
+        orders = ["In order", "Shuffle"]
 
         ttk.Label(controls, text="Topic").grid(row=0, column=0, sticky="w", padx=10, pady=8)
         self.coach_topic_var = tk.StringVar(value="All")
@@ -486,11 +491,26 @@ class PlaybooksApp:
         difficulty_box.grid(row=0, column=3, sticky="w", padx=6, pady=8)
         difficulty_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
+        ttk.Label(controls, text="Count").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        self.coach_count_var = tk.StringVar(value="10")
+        count_box = ttk.Combobox(controls, textvariable=self.coach_count_var, values=counts, state="readonly", width=10)
+        count_box.grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        count_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+
+        ttk.Label(controls, text="Order").grid(row=1, column=2, sticky="w", padx=(10, 2), pady=(0, 8))
+        self.coach_order_var = tk.StringVar(value="Shuffle")
+        order_box = ttk.Combobox(controls, textvariable=self.coach_order_var, values=orders, state="readonly", width=18)
+        order_box.grid(row=1, column=3, sticky="w", padx=6, pady=(0, 8))
+        order_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+
         ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=4, padx=10, pady=8)
         ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=5, padx=10, pady=8)
-        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=1, column=4, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Review Missed", command=self.review_missed_coach_questions).grid(row=1, column=4, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Summary", command=self.show_coach_summary).grid(row=1, column=5, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=2, column=4, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Copy Missed", command=self.copy_missed_coach_review).grid(row=2, column=5, padx=10, pady=(0, 8))
         self.coach_score_var = tk.StringVar(value="Score: 0/0")
-        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
 
         qpanel = self._panel(parent, "Question")
         qpanel.columnconfigure(0, weight=1)
@@ -1350,6 +1370,8 @@ class PlaybooksApp:
     def start_coach_set(self):
         topic = self.coach_topic_var.get() if hasattr(self, "coach_topic_var") else "All"
         difficulty = self.coach_difficulty_var.get() if hasattr(self, "coach_difficulty_var") else "All"
+        count_value = self.coach_count_var.get() if hasattr(self, "coach_count_var") else "All"
+        order_value = self.coach_order_var.get() if hasattr(self, "coach_order_var") else "In order"
 
         questions = list(COACH_QUESTIONS)
         if topic != "All":
@@ -1357,11 +1379,24 @@ class PlaybooksApp:
         if difficulty != "All":
             questions = [item for item in questions if item.get("difficulty") == difficulty]
 
+        if order_value == "Shuffle":
+            questions = list(questions)
+            random.shuffle(questions)
+
+        if count_value != "All":
+            try:
+                limit = int(count_value)
+                questions = questions[:limit]
+            except (TypeError, ValueError):
+                pass
+
         self.coach_visible_questions = questions or list(COACH_QUESTIONS)
         self.current_coach_index = 0
         self.coach_answer_var.set(-1)
         self.coach_attempted = 0
         self.coach_correct = 0
+        self.coach_results = {}
+        self.coach_set_label = f"Topic: {topic} | Difficulty: {difficulty} | Count: {count_value} | Order: {order_value}"
         self.refresh_coach_question()
 
     def selected_coach_question(self):
@@ -1384,8 +1419,13 @@ class PlaybooksApp:
             return
         self.coach_answer_var.set(-1)
         total = len(self.coach_visible_questions)
+        question_id = item.get("id", f"index_{self.current_coach_index}")
+        prior = self.coach_results.get(question_id)
+        prior_text = ""
+        if prior:
+            prior_text = " | Prior: " + ("Correct" if prior.get("correct") else "Missed")
         self.coach_question_var.set(
-            f"Question {self.current_coach_index + 1} of {total} | {item.get('topic', '')} | {item.get('difficulty', '')}\n{item.get('question', '')}"
+            f"Question {self.current_coach_index + 1} of {total} | {item.get('topic', '')} | {item.get('difficulty', '')}{prior_text}\n{item.get('question', '')}"
         )
         for idx, choice in enumerate(item.get("choices", [])):
             ttk.Radiobutton(
@@ -1403,7 +1443,8 @@ class PlaybooksApp:
     def update_coach_score(self):
         if hasattr(self, "coach_score_var"):
             total = len(getattr(self, "coach_visible_questions", []))
-            self.coach_score_var.set(f"Score: {self.coach_correct}/{self.coach_attempted} checked | Set size: {total}")
+            missed = sum(1 for result in getattr(self, "coach_results", {}).values() if not result.get("correct"))
+            self.coach_score_var.set(f"Score: {self.coach_correct}/{self.coach_attempted} checked | Missed: {missed} | Set size: {total}")
 
     def format_coach_answer(self, item, selected_index=None, reveal_only=False):
         if not item:
@@ -1441,11 +1482,80 @@ class PlaybooksApp:
         if selected < 0:
             messagebox.showinfo("Choose an answer", "Select an answer first, or use Show Answer for study mode.")
             return
-        self.coach_attempted += 1
-        if selected == item.get("answer_index", 0):
-            self.coach_correct += 1
+        question_id = item.get("id", f"index_{self.current_coach_index}")
+        was_checked_before = question_id in self.coach_results
+        correct = selected == item.get("answer_index", 0)
+        self.coach_results[question_id] = {
+            "id": question_id,
+            "topic": item.get("topic", ""),
+            "difficulty": item.get("difficulty", ""),
+            "question": item.get("question", ""),
+            "selected_index": selected,
+            "answer_index": item.get("answer_index", 0),
+            "correct": correct,
+        }
+        if not was_checked_before:
+            self.coach_attempted += 1
+            if correct:
+                self.coach_correct += 1
+        else:
+            self.coach_correct = sum(1 for result in self.coach_results.values() if result.get("correct"))
+            self.coach_attempted = len(self.coach_results)
         self.set_text(self.coach_feedback_text, self.format_coach_answer(item, selected_index=selected))
         self.update_coach_score()
+
+    def build_coach_summary_text(self):
+        total = len(getattr(self, "coach_visible_questions", []))
+        attempted = len(getattr(self, "coach_results", {}))
+        correct = sum(1 for result in self.coach_results.values() if result.get("correct"))
+        missed = attempted - correct
+        percent = round((correct / attempted) * 100, 1) if attempted else 0
+        lines = [
+            "Coach Mode Drill Summary",
+            "",
+            getattr(self, "coach_set_label", "Current question set"),
+            f"Questions in set: {total}",
+            f"Checked: {attempted}",
+            f"Correct: {correct}",
+            f"Missed: {missed}",
+            f"Score: {percent}%" if attempted else "Score: Not started",
+            "",
+            "Missed / review items:",
+        ]
+        missed_items = self.get_missed_coach_questions()
+        if missed_items:
+            for item in missed_items:
+                lines.append(f"- {item.get('topic', '')} / {item.get('difficulty', '')}: {item.get('question', '')}")
+        else:
+            lines.append("- No missed questions in the current checked set.")
+        lines.append("")
+        lines.append("Reminder: Coach Mode is for refresher training and examiner-thinking practice. It is not a certification test and it does not score case work.")
+        return "\n".join(lines)
+
+    def get_missed_coach_questions(self):
+        missed_ids = {qid for qid, result in getattr(self, "coach_results", {}).items() if not result.get("correct")}
+        if not missed_ids:
+            return []
+        lookup = {item.get("id", f"index_{idx}"): item for idx, item in enumerate(COACH_QUESTIONS)}
+        return [lookup[qid] for qid in missed_ids if qid in lookup]
+
+    def show_coach_summary(self):
+        self.show_text_popup("Coach Drill Summary", self.build_coach_summary_text())
+
+    def review_missed_coach_questions(self):
+        missed = self.get_missed_coach_questions()
+        if not missed:
+            messagebox.showinfo("Review Missed", "No missed questions are available for review in the current drill.")
+            return
+        self.coach_visible_questions = missed
+        self.current_coach_index = 0
+        self.coach_answer_var.set(-1)
+        self.coach_set_label = "Missed-question review"
+        self.refresh_coach_question()
+        messagebox.showinfo("Review Missed", f"Loaded {len(missed)} missed question(s) for review.")
+
+    def copy_missed_coach_review(self):
+        self.copy_to_clipboard(self.build_coach_summary_text(), "Coach drill summary")
 
     def show_coach_answer(self):
         item = self.selected_coach_question()
@@ -1562,4 +1672,3 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
-

@@ -6,7 +6,7 @@ https://byte-case.com
 
 ## Version
 
-v0.8.2
+v0.9.0
 
 ## Purpose
 
@@ -44,23 +44,23 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.8.2 updates
+## v0.9.0 updates
 
-v0.8.2 adds the first **Coach Mode** foundation.
+v0.9.0 expands Coach Mode into a more useful drill workflow.
 
 Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
 
 Changes include:
 
-- Added **Coach Mode** tab
-- Added 12 starter examiner-thinking questions
-- Added topic filtering for practice sets
-- Added answer checking with basic local score tracking
-- Added Show Answer study option
-- Added explanations, follow-up questions, and guardrails for each question
-- Added shortcuts to open related Scenario Coach cards
-- Added shortcut to search related reference terms
-- Expanded reference search to include Coach Mode questions
+- Added selectable drill size: All, 5, 10, 15, or 20 questions
+- Added drill order control: In order or Shuffle
+- Added missed-question tracking
+- Added Review Missed mode
+- Added Coach Drill Summary popup
+- Added Copy Missed / Summary action
+- Preserved topic and difficulty filtering
+- Preserved answer checking, explanations, follow-up questions, and guardrails
+- Preserved shortcuts to related Scenario Coach cards and reference terms
 - Preserved Playbooks as a non-case reference/refresher module
 
 ## Coach Mode topics
@@ -76,6 +76,24 @@ Starter question topics include:
 - Timestamps
 - Windows / File Activity
 - Validation / Tool Confidence
+
+
+## Coach drills and missed-question review
+
+Coach Mode can now be used as a short practice drill instead of only a linear question list. The examiner can choose a topic, difficulty, question count, and order. After checking answers, missed questions can be loaded into a focused review set.
+
+Drill controls include:
+
+- Topic
+- Difficulty
+- Count
+- Order
+- Start / Reset
+- Review Missed
+- Summary
+- Copy Missed
+
+The drill score and missed-question review are local to the current app session. Coach Mode remains a refresher and learning tool. It does not score case work and does not write case notes.
 
 ## Attribution / use-context mindset
 
@@ -168,13 +186,13 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Add Playbooks Coach Mode foundation
+Add Playbooks coach drills and missed review
 ```
 
 ## Recommended commit description
 
 ```text
-Adds a Coach Mode tab with starter examiner-thinking questions, topic filtering, answer checking, explanations, follow-up prompts, guardrails, Scenario Coach shortcuts, and reference-search integration. Coach Mode reinforces attribution caution, documentation habits, and overclaim guardrails while preserving Playbooks as a non-case reference and refresher tool.
+Adds Coach Mode drill controls for question count and order, missed-question tracking, Review Missed mode, a drill summary popup, and Copy Missed/Summary support while preserving topic/difficulty filtering, Scenario Coach shortcuts, and Playbooks as a non-case reference and refresher tool.
 ```
 
 ## Coach difficulty levels
@@ -188,9 +206,9 @@ Coach Mode now supports three examiner experience levels for each major realm:
 The intent is to let a new examiner start safely while giving a more practiced examiner deeper scenario questions without turning Playbooks into a certification exam or case-tracking tool.
 
 
-## v0.8.2 question-pack organization
+## v0.9.0 question-pack organization
 
-v0.8.2 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
+v0.9.0 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
 
 Question pack foundation:
 
