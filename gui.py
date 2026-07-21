@@ -167,8 +167,8 @@ class PlaybooksApp:
         self.settings = load_settings()
         self.colors = apply_theme(root, self.settings)
         self.root.title(f"{APP_NAME} v{APP_VERSION}")
-        self.root.geometry("1180x760")
-        self.root.minsize(1060, 680)
+        self.root.geometry("1280x820")
+        self.root.minsize(1120, 720)
         self.session = create_session(PLAYBOOKS[0]["id"], self.settings.get("defaults", {}).get("mode", "Field Reference"))
         self.current_step_index = 1
         self.last_export_folder = None
@@ -187,14 +187,14 @@ class PlaybooksApp:
 
     def _build_ui(self):
         header = ttk.Frame(self.root)
-        header.pack(fill="x", padx=14, pady=(12, 6))
+        header.pack(fill="x", padx=16, pady=(10, 4))
         ttk.Label(header, text=APP_NAME, style="Title.TLabel").pack(anchor="w")
         ttk.Label(header, text=APP_SUBTITLE, style="Muted.TLabel").pack(anchor="w")
-        ttk.Label(header, text=APP_ATTRIBUTION, style="Muted.TLabel").pack(anchor="w")
+        ttk.Label(header, text=APP_ATTRIBUTION, style="Muted.TLabel").pack(anchor="w", pady=(1, 0))
 
 
         self.notebook = ttk.Notebook(self.root)
-        self.notebook.pack(fill="both", expand=True, padx=14, pady=(0, 12))
+        self.notebook.pack(fill="both", expand=True, padx=16, pady=(0, 14))
 
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
         self.workbench_tab = ttk.Frame(self.notebook)
@@ -212,9 +212,9 @@ class PlaybooksApp:
         self.scenario_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.coach_tab = ScrollableFrame(self.workbench_notebook, self.colors)
         self.workbench_notebook.add(self.decision_tab, text="Guide")
-        self.workbench_notebook.add(self.playbook_tab, text="Playbook")
+        self.workbench_notebook.add(self.playbook_tab, text="Steps")
         self.workbench_notebook.add(self.artifact_tab, text="Artifacts")
-        self.workbench_notebook.add(self.scenario_tab, text="Coaching")
+        self.workbench_notebook.add(self.scenario_tab, text="Coach")
         self.workbench_notebook.add(self.coach_tab, text="Drills")
 
         self.library_notebook = ttk.Notebook(self.library_tab)
@@ -223,9 +223,9 @@ class PlaybooksApp:
         self.reference_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.question_packs_tab = ScrollableFrame(self.library_notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.library_notebook, self.colors)
-        self.library_notebook.add(self.session_tab, text="Save / Export")
+        self.library_notebook.add(self.session_tab, text="Export")
         self.library_notebook.add(self.reference_tab, text="Search")
-        self.library_notebook.add(self.question_packs_tab, text="Question Packs")
+        self.library_notebook.add(self.question_packs_tab, text="Packs")
         self.library_notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
@@ -241,7 +241,7 @@ class PlaybooksApp:
 
     def _panel(self, parent, title=None):
         panel = ttk.LabelFrame(parent, text=title) if title else ttk.Frame(parent, style="Panel.TFrame")
-        panel.pack(fill="x", padx=10, pady=8)
+        panel.pack(fill="x", padx=12, pady=7)
         return panel
 
     def show_start_page(self):
@@ -284,89 +284,89 @@ class PlaybooksApp:
         self.library_notebook.select(self.settings_tab)
 
     def _build_start_tab(self, parent):
-        intro = self._panel(parent, "What do you need help with?")
+        intro = self._panel(parent, "Start")
         intro.columnconfigure(1, weight=1)
-        ttk.Label(intro, text="Mode:").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(intro, text="Mode:").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.mode_var = tk.StringVar(value=self.session.get("mode", "Field Reference"))
         mode = ttk.Combobox(intro, textvariable=self.mode_var, values=["Field Reference", "Learning / Refresher"], state="readonly", width=24)
-        mode.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        mode.grid(row=0, column=1, sticky="w", padx=12, pady=8)
         mode.bind("<<ComboboxSelected>>", lambda _e: self.set_mode())
-        ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Button(intro, text="Guide Me", style="Accent.TButton", command=self.show_guide_page).grid(row=0, column=3, padx=10, pady=8)
-        ttk.Button(intro, text="Search Reference", command=self.show_reference_page).grid(row=0, column=4, padx=10, pady=8)
+        ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=12, pady=8)
+        ttk.Button(intro, text="Guide", style="Accent.TButton", command=self.show_guide_page).grid(row=0, column=3, padx=12, pady=8)
+        ttk.Button(intro, text="Search", command=self.show_reference_page).grid(row=0, column=4, padx=12, pady=8)
 
-        lanes = self._panel(parent, "Main paths")
+        lanes = self._panel(parent, "Open a lane")
         lanes.columnconfigure(0, weight=1)
         lanes.columnconfigure(1, weight=1)
         lanes.columnconfigure(2, weight=1)
         path_items = [
-            ("Workbench", "Use Guide, Playbooks, Artifacts, Coaching, and Drills from one focused work area.", self.show_guide_page),
-            ("Practice Drills", "Run Coach drills, review missed questions, and strengthen examiner judgment.", self.show_coach_page),
-            ("Library", "Save/export sessions, search reference content, manage question packs, or adjust settings.", self.show_session_page),
+            ("Reference", "Use Guide, Steps, Artifacts, Coach, and Drills from one workbench.", self.show_guide_page),
+            ("Practice", "Run drills, review missed questions, and reinforce examiner judgment.", self.show_coach_page),
+            ("Library", "Export, search, manage packs, and adjust settings.", self.show_session_page),
         ]
         for idx, (title, desc, command) in enumerate(path_items):
             card = ttk.Frame(lanes, style="Panel.TFrame")
-            card.grid(row=0, column=idx, sticky="nsew", padx=8, pady=10)
-            ttk.Label(card, text=title, style="Header.TLabel", wraplength=230).pack(anchor="w", padx=10, pady=(10, 4))
-            ttk.Label(card, text=desc, style="Muted.TLabel", wraplength=230).pack(anchor="w", padx=10, pady=(0, 8))
-            ttk.Button(card, text="Open", command=command).pack(anchor="w", padx=10, pady=(0, 10))
+            card.grid(row=0, column=idx, sticky="nsew", padx=8, pady=8)
+            ttk.Label(card, text=title, style="Header.TLabel", wraplength=260).pack(anchor="w", padx=12, pady=(10, 4))
+            ttk.Label(card, text=desc, style="Muted.TLabel", wraplength=260).pack(anchor="w", padx=12, pady=(0, 7))
+            ttk.Button(card, text="Open", command=command).pack(anchor="w", padx=12, pady=(0, 10))
 
-        selector = self._panel(parent, "Select a playbook")
+        selector = self._panel(parent, "Playbooks")
         selector.columnconfigure(0, weight=1)
         selector.columnconfigure(1, weight=1)
-        ttk.Label(selector, text="Category").grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
-        ttk.Label(selector, text="Playbooks").grid(row=0, column=1, sticky="w", padx=10, pady=(8, 2))
+        ttk.Label(selector, text="Category").grid(row=0, column=0, sticky="w", padx=12, pady=(8, 2))
+        ttk.Label(selector, text="Playbooks").grid(row=0, column=1, sticky="w", padx=12, pady=(8, 2))
         self.category_var = tk.StringVar(value="All")
         self.category_box = ttk.Combobox(selector, textvariable=self.category_var, values=["All"] + categories(), state="readonly")
-        self.category_box.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 8))
+        self.category_box.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 7))
         self.category_box.bind("<<ComboboxSelected>>", lambda _e: self.populate_playbook_list())
         self.playbook_list = tk.Listbox(selector, height=8, exportselection=False)
-        self.playbook_list.grid(row=1, column=1, sticky="nsew", padx=10, pady=(0, 8))
+        self.playbook_list.grid(row=1, column=1, sticky="nsew", padx=12, pady=(0, 7))
         self.playbook_list.bind("<<ListboxSelect>>", lambda _e: self.preview_selected_playbook())
         bind_inner_mousewheel(self.playbook_list)
         selector.rowconfigure(1, weight=1)
         buttons = ttk.Frame(selector)
-        buttons.grid(row=2, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 8))
-        ttk.Button(buttons, text="Open Playbook", style="Accent.TButton", command=self.open_selected_playbook).pack(side="left", padx=(0, 8))
-        ttk.Button(buttons, text="Learning View", command=lambda: self.quick_mode("Learning / Refresher")).pack(side="left", padx=(0, 8))
-        ttk.Button(buttons, text="Field View", command=lambda: self.quick_mode("Field Reference")).pack(side="left", padx=(0, 8))
+        buttons.grid(row=2, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 7))
+        ttk.Button(buttons, text="Open", style="Accent.TButton", command=self.open_selected_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Learning", command=lambda: self.quick_mode("Learning / Refresher")).pack(side="left", padx=(0, 8))
+        ttk.Button(buttons, text="Field", command=lambda: self.quick_mode("Field Reference")).pack(side="left", padx=(0, 8))
 
         preview = self._panel(parent, "Preview")
-        self.preview_text = tk.Text(preview, height=12)
-        self.preview_text.pack(fill="x", padx=10, pady=10)
+        self.preview_text = tk.Text(preview, height=10)
+        self.preview_text.pack(fill="x", padx=12, pady=8)
         style_text_widget(self.preview_text, self.colors)
         bind_inner_mousewheel(self.preview_text)
         self.preview_text.configure(state="disabled")
 
-        quick = self._panel(parent, "Current playbook session")
+        quick = self._panel(parent, "Current session")
         self.start_summary_var = tk.StringVar()
-        ttk.Label(quick, textvariable=self.start_summary_var).pack(anchor="w", padx=10, pady=8)
+        ttk.Label(quick, textvariable=self.start_summary_var).pack(anchor="w", padx=12, pady=8)
         actions = ttk.Frame(quick)
-        actions.pack(fill="x", padx=10, pady=(0, 10))
+        actions.pack(fill="x", padx=12, pady=(0, 10))
         ttk.Button(actions, text="Continue", command=self.show_playbook_page).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Guide Me", command=self.show_guide_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Guide", command=self.show_guide_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Save / Export", command=self.show_session_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Export", command=self.show_session_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Artifacts", command=self.show_artifact_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Coaching", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Drills", command=self.show_coach_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Search", command=self.show_reference_page).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
-        intro = self._panel(parent, "Guide Me")
+        intro = self._panel(parent, "Guide")
         ttk.Label(
             intro,
-            text="Pick the situation closest to what you are doing. Playbooks will suggest the best built-in reference and explain why.",
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+            text="Choose the closest situation. Playbooks points you to a reference path and explains the reasoning.",
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(7, 3))
         ttk.Label(
             intro,
-            text="This is not a case workflow tracker. It is a learning/reference shortcut into the right playbook.",
-            wraplength=1040,
+            text="Reference shortcut only. Case progress belongs in ByteCase Workflow.",
+            wraplength=1120,
             style="Muted.TLabel",
-        ).pack(anchor="w", padx=10, pady=(0, 8))
+        ).pack(anchor="w", padx=12, pady=(0, 7))
 
-        chooser = self._panel(parent, "What are you working on?")
+        chooser = self._panel(parent, "Situation")
         chooser.columnconfigure(0, weight=1)
         chooser.columnconfigure(1, weight=1)
         self.decision_path_var = tk.StringVar(value=DECISION_PATHS[0]["label"] if DECISION_PATHS else "")
@@ -376,23 +376,23 @@ class PlaybooksApp:
             values=[path["label"] for path in DECISION_PATHS],
             state="readonly",
         )
-        self.decision_box.grid(row=0, column=0, sticky="ew", padx=10, pady=10)
+        self.decision_box.grid(row=0, column=0, sticky="ew", padx=12, pady=8)
         self.decision_box.bind("<<ComboboxSelected>>", lambda _e: self.refresh_decision_detail())
-        ttk.Button(chooser, text="Show Recommendation", style="Accent.TButton", command=self.refresh_decision_detail).grid(row=0, column=1, sticky="w", padx=10, pady=10)
+        ttk.Button(chooser, text="Show", style="Accent.TButton", command=self.refresh_decision_detail).grid(row=0, column=1, sticky="w", padx=12, pady=8)
 
-        detail = self._panel(parent, "Recommended reference path")
-        self.decision_detail_text = tk.Text(detail, height=20)
-        self.decision_detail_text.pack(fill="both", expand=True, padx=10, pady=10)
+        detail = self._panel(parent, "Recommendation")
+        self.decision_detail_text = tk.Text(detail, height=15)
+        self.decision_detail_text.pack(fill="both", expand=True, padx=12, pady=8)
         style_text_widget(self.decision_detail_text, self.colors)
         bind_inner_mousewheel(self.decision_detail_text)
         self.decision_detail_text.configure(state="disabled")
         actions = ttk.Frame(detail)
-        actions.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Open Recommended Playbook", style="Accent.TButton", command=self.open_recommended_playbook).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Use Learning Mode", command=lambda: self.open_recommended_playbook(force_mode="Learning / Refresher")).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Use Field Mode", command=lambda: self.open_recommended_playbook(force_mode="Field Reference")).pack(side="left", padx=(0, 8))
+        actions.pack(fill="x", padx=12, pady=(0, 10))
+        ttk.Button(actions, text="Open Playbook", style="Accent.TButton", command=self.open_recommended_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Learning Mode", command=lambda: self.open_recommended_playbook(force_mode="Learning / Refresher")).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Field Mode", command=lambda: self.open_recommended_playbook(force_mode="Field Reference")).pack(side="left", padx=(0, 8))
 
-        reminder = self._panel(parent, "How to use this")
+        reminder = self._panel(parent, "Mode reminder")
         ttk.Label(
             reminder,
             text=(
@@ -400,19 +400,19 @@ class PlaybooksApp:
                 "Use Learning / Refresher when you have time to slow down and read the deeper explanation layer. "
                 "Neither mode creates case notes or performs analysis."
             ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=10)
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=8)
         self.refresh_decision_detail()
 
     def _build_playbook_tab(self, parent):
-        top = self._panel(parent, "Current playbook")
+        top = self._panel(parent, "Playbook")
         top.columnconfigure(0, weight=1)
         self.playbook_title_var = tk.StringVar()
         self.playbook_meta_var = tk.StringVar()
-        ttk.Label(top, textvariable=self.playbook_title_var, font=("Segoe UI", 13, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
-        ttk.Label(top, textvariable=self.playbook_meta_var, style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
-        ttk.Button(top, text="Use When", command=lambda: self.show_list_popup("Use When", self.current_playbook().get("use_when", []))).grid(row=0, column=1, padx=5, pady=8)
-        ttk.Button(top, text="Pause When", command=lambda: self.show_list_popup("Avoid / Pause When", self.current_playbook().get("avoid_when", []))).grid(row=0, column=2, padx=5, pady=8)
+        ttk.Label(top, textvariable=self.playbook_title_var, font=("Segoe UI", 13, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 2))
+        ttk.Label(top, textvariable=self.playbook_meta_var, style="Muted.TLabel").grid(row=1, column=0, sticky="w", padx=12, pady=(0, 7))
+        ttk.Button(top, text="Use", command=lambda: self.show_list_popup("Use", self.current_playbook().get("use_when", []))).grid(row=0, column=1, padx=5, pady=8)
+        ttk.Button(top, text="Pause", command=lambda: self.show_list_popup("Avoid / Pause When", self.current_playbook().get("avoid_when", []))).grid(row=0, column=2, padx=5, pady=8)
 
         nav = self._panel(parent, "Steps")
         nav.columnconfigure(0, weight=1)
@@ -420,12 +420,12 @@ class PlaybooksApp:
         self.steps_tree.heading("status", text="Done")
         self.steps_tree.heading("title", text="Step")
         self.steps_tree.column("status", width=70, stretch=False)
-        self.steps_tree.column("title", width=760)
-        self.steps_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.steps_tree.column("title", width=840)
+        self.steps_tree.grid(row=0, column=0, sticky="nsew", padx=12, pady=8)
         self.steps_tree.bind("<<TreeviewSelect>>", lambda _e: self.select_tree_step())
         bind_inner_mousewheel(self.steps_tree)
         nav_buttons = ttk.Frame(nav)
-        nav_buttons.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 10))
+        nav_buttons.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 10))
         ttk.Button(nav_buttons, text="Previous", command=self.previous_step).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Next", command=self.next_step).pack(side="left", padx=(0, 8))
         ttk.Button(nav_buttons, text="Why?", command=lambda: self.show_step_panel("why")).pack(side="left", padx=(0, 8))
@@ -441,14 +441,14 @@ class PlaybooksApp:
         card.columnconfigure(0, weight=1)
         self.step_header_var = tk.StringVar()
         self.step_focus_var = tk.StringVar()
-        ttk.Label(card, textvariable=self.step_header_var, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 2))
+        ttk.Label(card, textvariable=self.step_header_var, font=("Segoe UI", 12, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=(8, 2))
         self.step_check_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(card, text="Mark as reviewed", variable=self.step_check_var, command=self.update_step_checked).grid(row=0, column=1, sticky="e", padx=10, pady=8)
-        ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 6))
+        ttk.Checkbutton(card, text="Mark as reviewed", variable=self.step_check_var, command=self.update_step_checked).grid(row=0, column=1, sticky="e", padx=12, pady=8)
+        ttk.Label(card, textvariable=self.step_focus_var, wraplength=980).grid(row=1, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 6))
         self.step_context_var = tk.StringVar()
-        ttk.Label(card, textvariable=self.step_context_var, style="Muted.TLabel", wraplength=980).grid(row=2, column=0, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(card, textvariable=self.step_context_var, style="Muted.TLabel", wraplength=980).grid(row=2, column=0, columnspan=2, sticky="w", padx=12, pady=(0, 7))
         card_actions = ttk.Frame(card)
-        card_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+        card_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
         ttk.Button(card_actions, text="Pop Out Reading", command=self.pop_out_current_reading).pack(side="left", padx=(0, 8))
         ttk.Button(card_actions, text="Deep Dive", command=self.show_deep_dive).pack(side="left", padx=(0, 8))
         ttk.Button(card_actions, text="Copy Summary", command=self.copy_step_summary).pack(side="left", padx=(0, 8))
@@ -460,10 +460,10 @@ class PlaybooksApp:
             detail,
             text="Read the guidance for the selected step first. Use the buttons above for focused explanations when you need more context.",
             style="Muted.TLabel",
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 0))
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(8, 0))
         self.detail_text = tk.Text(detail, height=16)
-        self.detail_text.pack(fill="both", expand=True, padx=10, pady=10)
+        self.detail_text.pack(fill="both", expand=True, padx=12, pady=8)
         style_text_widget(self.detail_text, self.colors)
         bind_inner_mousewheel(self.detail_text)
         self.detail_text.configure(state="disabled")
@@ -473,10 +473,10 @@ class PlaybooksApp:
             notes,
             text="Optional reference notes for your own learning or session continuity. This is not a case notes area.",
             style="Muted.TLabel",
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 0))
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(8, 0))
         self.step_notes_text = tk.Text(notes, height=5)
-        self.step_notes_text.pack(fill="x", padx=10, pady=10)
+        self.step_notes_text.pack(fill="x", padx=12, pady=8)
         style_text_widget(self.step_notes_text, self.colors)
         bind_inner_mousewheel(self.step_notes_text)
         self.step_notes_text.bind("<FocusOut>", lambda _e: self.save_current_step_notes())
@@ -488,20 +488,20 @@ class PlaybooksApp:
         ttk.Label(
             summary_panel,
             text="This saves the current playbook, selected mode, current step, reviewed steps, and step reference notes. It does not create case notes or write under a case folder.",
-            wraplength=1040,
+            wraplength=1120,
             style="Muted.TLabel",
-        ).grid(row=0, column=0, sticky="w", padx=10, pady=(8, 4))
+        ).grid(row=0, column=0, sticky="w", padx=12, pady=(7, 3))
         self.progress_summary_var = tk.StringVar()
-        ttk.Label(summary_panel, textvariable=self.progress_summary_var).grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(summary_panel, textvariable=self.progress_summary_var).grid(row=1, column=0, sticky="w", padx=12, pady=(0, 7))
 
         review = self._panel(parent, "Review / export")
         self.review_text = tk.Text(review, height=14)
-        self.review_text.pack(fill="x", padx=10, pady=10)
+        self.review_text.pack(fill="x", padx=12, pady=8)
         style_text_widget(self.review_text, self.colors)
         bind_inner_mousewheel(self.review_text)
         self.review_text.configure(state="disabled")
         actions = ttk.Frame(review)
-        actions.pack(fill="x", padx=10, pady=(0, 10))
+        actions.pack(fill="x", padx=12, pady=(0, 10))
         ttk.Button(actions, text="Review", command=self.refresh_review).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save Session", style="Accent.TButton", command=self.export_session).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Save + Open", command=lambda: self.export_session(open_after=True)).pack(side="left", padx=(0, 8))
@@ -516,61 +516,61 @@ class PlaybooksApp:
                 "Start with the question you are trying to answer. Select the situation and the examiner question, "
                 "then review artifact areas that may help, where those artifacts may be found, and common tools or methods used to collect or examine them."
             ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(7, 3))
         ttk.Label(
             intro,
             text=(
                 "Tool names are examples of commonly used industry tools or methods, not endorsements, recommendations, "
                 "or validation statements. Validate tools locally and follow agency policy."
             ),
-            wraplength=1040,
+            wraplength=1120,
             style="Muted.TLabel",
-        ).pack(anchor="w", padx=10, pady=(0, 8))
+        ).pack(anchor="w", padx=12, pady=(0, 7))
 
-        helper = self._panel(parent, "What are you trying to understand?")
+        helper = self._panel(parent, "Artifact Finder")
         helper.columnconfigure(1, weight=1)
-        ttk.Label(helper, text="Situation").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 4))
+        ttk.Label(helper, text="Situation").grid(row=0, column=0, sticky="w", padx=12, pady=(10, 4))
         self.artifact_situation_var = tk.StringVar(value="Dead-box laptop exam")
         situations = self.artifact_situation_values()
         self.artifact_situation_box = ttk.Combobox(helper, textvariable=self.artifact_situation_var, values=situations, state="readonly", width=36)
-        self.artifact_situation_box.grid(row=0, column=1, sticky="ew", padx=10, pady=(10, 4))
+        self.artifact_situation_box.grid(row=0, column=1, sticky="ew", padx=12, pady=(10, 4))
         self.artifact_situation_box.bind("<<ComboboxSelected>>", lambda _e: self.refresh_artifact_questions())
 
-        ttk.Label(helper, text="Question").grid(row=1, column=0, sticky="w", padx=10, pady=(4, 10))
+        ttk.Label(helper, text="Question").grid(row=1, column=0, sticky="w", padx=12, pady=(4, 10))
         self.question_var = tk.StringVar()
         self.question_box = ttk.Combobox(helper, textvariable=self.question_var, values=[], state="readonly")
-        self.question_box.grid(row=1, column=1, sticky="ew", padx=10, pady=(4, 10))
+        self.question_box.grid(row=1, column=1, sticky="ew", padx=12, pady=(4, 10))
         self.question_box.bind("<<ComboboxSelected>>", lambda _e: self.show_question_detail())
 
-        self.question_detail_text = tk.Text(helper, height=20)
-        self.question_detail_text.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=(0, 10))
+        self.question_detail_text = tk.Text(helper, height=15)
+        self.question_detail_text.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=12, pady=(0, 10))
         style_text_widget(self.question_detail_text, self.colors)
         bind_inner_mousewheel(self.question_detail_text)
         self.question_detail_text.configure(state="disabled")
         helper.rowconfigure(2, weight=1)
         q_actions = ttk.Frame(helper)
-        q_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
-        ttk.Button(q_actions, text="Copy Guidance", command=self.copy_question_guidance).pack(side="left", padx=(0, 8))
+        q_actions.grid(row=3, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
+        ttk.Button(q_actions, text="Copy", command=self.copy_question_guidance).pack(side="left", padx=(0, 8))
         ttk.Button(q_actions, text="Use / Access Context", command=self.show_use_context).pack(side="left", padx=(0, 8))
 
-        detail = self._panel(parent, "Artifact area detail")
+        detail = self._panel(parent, "Artifact Details")
         detail.columnconfigure(0, weight=1)
         detail.columnconfigure(1, weight=2)
         self.artifact_area_list = tk.Listbox(detail, height=8, exportselection=False)
-        self.artifact_area_list.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.artifact_area_list.grid(row=0, column=0, sticky="nsew", padx=12, pady=8)
         self.artifact_area_list.bind("<<ListboxSelect>>", lambda _e: self.show_artifact_area_detail())
         bind_inner_mousewheel(self.artifact_area_list)
-        self.artifact_detail_text = tk.Text(detail, height=16)
-        self.artifact_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.artifact_detail_text = tk.Text(detail, height=14)
+        self.artifact_detail_text.grid(row=0, column=1, sticky="nsew", padx=12, pady=8)
         style_text_widget(self.artifact_detail_text, self.colors)
         bind_inner_mousewheel(self.artifact_detail_text)
         self.artifact_detail_text.configure(state="disabled")
         detail.rowconfigure(0, weight=1)
         actions = ttk.Frame(detail)
-        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Copy Artifact Detail", command=self.copy_artifact_guidance).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Search This", command=self.search_selected_artifact_area).pack(side="left", padx=(0, 8))
+        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
+        ttk.Button(actions, text="Copy Detail", command=self.copy_artifact_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search", command=self.search_selected_artifact_area).pack(side="left", padx=(0, 8))
 
         self.refresh_artifact_questions()
 
@@ -578,89 +578,82 @@ class PlaybooksApp:
         intro = self._panel(parent, "Coaching")
         ttk.Label(
             intro,
-            text=(
-                "Use Coaching when you want a mentoring-examiner style question path. "
-                "Answer each step without seeing the result, then review the full path at the end. "
-                "The goal is examiner mindset, not trivia."
-            ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+            text="Use Coach for chained examiner-thinking prompts. Answer each step first, then review the full reasoning path at the end.",
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(7, 3))
         ttk.Label(
             intro,
-            text="This is not a tabletop exercise, certification test, finding generator, or substitute for agency policy. It is a structured coaching aid for careful forensic thinking.",
-            wraplength=1040,
+            text="Not a tabletop, certification test, finding generator, or substitute for policy.",
+            wraplength=1120,
             style="Muted.TLabel",
-        ).pack(anchor="w", padx=10, pady=(0, 8))
+        ).pack(anchor="w", padx=12, pady=(0, 7))
 
-        selector = self._panel(parent, "Coaching path")
+        selector = self._panel(parent, "Path")
         selector.columnconfigure(1, weight=1)
-        ttk.Label(selector, text="Path").grid(row=0, column=0, sticky="w", padx=10, pady=10)
+        ttk.Label(selector, text="Path").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.coaching_prompt_var = tk.StringVar(value=SCENARIO_COACHING_QUESTIONS[0]["title"] if SCENARIO_COACHING_QUESTIONS else "")
         self.coaching_prompt_box = ttk.Combobox(selector, textvariable=self.coaching_prompt_var, values=[item["title"] for item in SCENARIO_COACHING_QUESTIONS], state="readonly")
-        self.coaching_prompt_box.grid(row=0, column=1, sticky="ew", padx=10, pady=10)
+        self.coaching_prompt_box.grid(row=0, column=1, sticky="ew", padx=12, pady=8)
         self.coaching_prompt_box.bind("<<ComboboxSelected>>", lambda _e: self.begin_coaching_path())
-        ttk.Button(selector, text="Start / Reset Path", command=self.begin_coaching_path).grid(row=0, column=2, padx=10, pady=10)
-        ttk.Button(selector, text="Next Path", command=self.next_coaching_prompt).grid(row=0, column=3, padx=10, pady=10)
+        ttk.Button(selector, text="Start", command=self.begin_coaching_path).grid(row=0, column=2, padx=12, pady=8)
+        ttk.Button(selector, text="Next Path", command=self.next_coaching_prompt).grid(row=0, column=3, padx=12, pady=8)
 
-        context = self._panel(parent, "Scenario context")
+        context = self._panel(parent, "Context")
         self.coaching_context_var = tk.StringVar()
-        ttk.Label(context, textvariable=self.coaching_context_var, wraplength=1040).pack(anchor="w", padx=10, pady=10)
+        ttk.Label(context, textvariable=self.coaching_context_var, wraplength=1120).pack(anchor="w", padx=12, pady=8)
 
-        qpanel = self._panel(parent, "Mentor question")
+        qpanel = self._panel(parent, "Question")
         qpanel.columnconfigure(0, weight=1)
         self.coaching_progress_var = tk.StringVar(value="Question 1")
-        ttk.Label(qpanel, textvariable=self.coaching_progress_var, style="Muted.TLabel").grid(row=0, column=0, sticky="w", padx=10, pady=(10, 2))
+        ttk.Label(qpanel, textvariable=self.coaching_progress_var, style="Muted.TLabel").grid(row=0, column=0, sticky="w", padx=12, pady=(10, 2))
         self.coaching_question_var = tk.StringVar()
-        ttk.Label(qpanel, textvariable=self.coaching_question_var, wraplength=1040, font=("Segoe UI", 11, "bold")).grid(row=1, column=0, sticky="w", padx=10, pady=(2, 6))
+        ttk.Label(qpanel, textvariable=self.coaching_question_var, wraplength=1120, font=("Segoe UI", 11, "bold")).grid(row=1, column=0, sticky="w", padx=12, pady=(2, 6))
         self.coaching_answer_var = tk.IntVar(value=-1)
         self.coaching_choice_frame = ttk.Frame(qpanel)
-        self.coaching_choice_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=(0, 6))
+        self.coaching_choice_frame.grid(row=2, column=0, sticky="ew", padx=12, pady=(0, 6))
 
         actions = ttk.Frame(qpanel)
-        actions.grid(row=3, column=0, sticky="ew", padx=10, pady=(2, 10))
+        actions.grid(row=3, column=0, sticky="ew", padx=12, pady=(2, 10))
         ttk.Button(actions, text="Previous", command=self.previous_coaching_step).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Record / Next", style="Accent.TButton", command=self.check_coaching_answer).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Finish & Review", command=self.show_coaching_answer).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Copy Review", command=self.copy_coaching_guidance).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Open Related Playbook", command=self.open_coaching_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Record + Next", style="Accent.TButton", command=self.check_coaching_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Finish", command=self.show_coaching_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Copy", command=self.copy_coaching_guidance).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Open Playbook", command=self.open_coaching_playbook).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Search Terms", command=self.search_coaching_terms).pack(side="left", padx=(0, 8))
 
-        detail = self._panel(parent, "Path status / final review")
-        self.coaching_feedback_text = tk.Text(detail, height=22)
-        self.coaching_feedback_text.pack(fill="both", expand=True, padx=10, pady=10)
+        detail = self._panel(parent, "Review")
+        self.coaching_feedback_text = tk.Text(detail, height=16)
+        self.coaching_feedback_text.pack(fill="both", expand=True, padx=12, pady=8)
         style_text_widget(self.coaching_feedback_text, self.colors)
         bind_inner_mousewheel(self.coaching_feedback_text)
         self.coaching_feedback_text.configure(state="disabled")
 
-        mindset = self._panel(parent, "Core mindset")
+        mindset = self._panel(parent, "Mindset")
         ttk.Label(
             mindset,
             text=(
                 "During a coaching path, the app records your choices without revealing the best answer. "
                 "At the end, review the full chain: what the artifact supports, what context is missing, what alternatives exist, and what language avoids overclaiming."
             ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=10)
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=8)
         self.begin_coaching_path()
 
     def _build_coach_tab(self, parent):
-        intro = self._panel(parent, "Coach Mode")
+        intro = self._panel(parent, "Drills")
         ttk.Label(
             intro,
-            text=(
-                "Use Coach Mode for quick examiner-thinking practice. It is designed as a refresher and learning aid: "
-                "read the prompt, choose the safest answer, then review the explanation and follow-up questions."
-            ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+            text="Run short practice sets to reinforce careful examiner judgment, attribution caution, and documentation habits.",
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(7, 3))
         ttk.Label(
             intro,
-            text="This is not a certification test and it does not score case work. It reinforces guardrails, attribution caution, documentation habits, and examiner judgment.",
-            wraplength=1040,
+            text="Practice only. It does not score case work or replace training, policy, or supervision.",
+            wraplength=1120,
             style="Muted.TLabel",
-        ).pack(anchor="w", padx=10, pady=(0, 8))
+        ).pack(anchor="w", padx=12, pady=(0, 7))
 
-        controls = self._panel(parent, "Practice set")
+        controls = self._panel(parent, "Filters")
         controls.columnconfigure(1, weight=1)
         pack_names = ["All"] + sorted({item.get("pack_name", BUILT_IN_PACK_NAME) for item in self.coach_questions})
         topics = ["All"] + sorted({item.get("topic", "General") for item in self.coach_questions})
@@ -668,16 +661,16 @@ class PlaybooksApp:
         counts = ["All", "5", "10", "15", "20"]
         orders = ["In order", "Shuffle"]
 
-        ttk.Label(controls, text="Pack").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(controls, text="Pack").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.coach_pack_var = tk.StringVar(value="All")
         self.coach_pack_box = ttk.Combobox(controls, textvariable=self.coach_pack_var, values=pack_names, state="readonly", width=34)
-        self.coach_pack_box.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        self.coach_pack_box.grid(row=0, column=1, sticky="w", padx=12, pady=8)
         self.coach_pack_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Label(controls, text="Topic").grid(row=1, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, text="Topic").grid(row=1, column=0, sticky="w", padx=12, pady=(0, 7))
         self.coach_topic_var = tk.StringVar(value="All")
         self.coach_topic_box = ttk.Combobox(controls, textvariable=self.coach_topic_var, values=topics, state="readonly", width=34)
-        self.coach_topic_box.grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        self.coach_topic_box.grid(row=1, column=1, sticky="w", padx=12, pady=(0, 7))
         self.coach_topic_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
         ttk.Label(controls, text="Difficulty").grid(row=0, column=2, sticky="w", padx=(10, 2), pady=8)
@@ -686,43 +679,43 @@ class PlaybooksApp:
         difficulty_box.grid(row=0, column=3, sticky="w", padx=6, pady=8)
         difficulty_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Label(controls, text="Count").grid(row=1, column=2, sticky="w", padx=(10, 2), pady=(0, 8))
+        ttk.Label(controls, text="Count").grid(row=1, column=2, sticky="w", padx=(10, 2), pady=(0, 7))
         self.coach_count_var = tk.StringVar(value="10")
         count_box = ttk.Combobox(controls, textvariable=self.coach_count_var, values=counts, state="readonly", width=10)
-        count_box.grid(row=1, column=3, sticky="w", padx=6, pady=(0, 8))
+        count_box.grid(row=1, column=3, sticky="w", padx=6, pady=(0, 7))
         count_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Label(controls, text="Order").grid(row=2, column=0, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, text="Order").grid(row=2, column=0, sticky="w", padx=12, pady=(0, 7))
         self.coach_order_var = tk.StringVar(value="Shuffle")
         order_box = ttk.Combobox(controls, textvariable=self.coach_order_var, values=orders, state="readonly", width=18)
-        order_box.grid(row=2, column=1, sticky="w", padx=10, pady=(0, 8))
+        order_box.grid(row=2, column=1, sticky="w", padx=12, pady=(0, 7))
         order_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
 
-        ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=4, padx=10, pady=8)
-        ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=5, padx=10, pady=8)
-        ttk.Button(controls, text="Review Missed", command=self.review_missed_coach_questions).grid(row=1, column=4, padx=10, pady=(0, 8))
-        ttk.Button(controls, text="Summary", command=self.show_coach_summary).grid(row=1, column=5, padx=10, pady=(0, 8))
-        ttk.Button(controls, text="Open Coaching", command=self.open_coach_scenario).grid(row=2, column=4, padx=10, pady=(0, 8))
-        ttk.Button(controls, text="Copy Missed", command=self.copy_missed_coach_review).grid(row=2, column=5, padx=10, pady=(0, 8))
+        ttk.Button(controls, text="Start", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=4, padx=12, pady=8)
+        ttk.Button(controls, text="Next", command=self.next_coach_question).grid(row=0, column=5, padx=12, pady=8)
+        ttk.Button(controls, text="Review Missed", command=self.review_missed_coach_questions).grid(row=1, column=4, padx=12, pady=(0, 7))
+        ttk.Button(controls, text="Summary", command=self.show_coach_summary).grid(row=1, column=5, padx=12, pady=(0, 7))
+        ttk.Button(controls, text="Open Coach", command=self.open_coach_scenario).grid(row=2, column=4, padx=12, pady=(0, 7))
+        ttk.Button(controls, text="Copy Missed", command=self.copy_missed_coach_review).grid(row=2, column=5, padx=12, pady=(0, 7))
         self.coach_score_var = tk.StringVar(value="Score: 0/0")
-        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=2, columnspan=2, sticky="w", padx=10, pady=(0, 8))
+        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=2, column=2, columnspan=2, sticky="w", padx=12, pady=(0, 7))
 
         qpanel = self._panel(parent, "Question")
         qpanel.columnconfigure(0, weight=1)
         self.coach_question_var = tk.StringVar()
-        ttk.Label(qpanel, textvariable=self.coach_question_var, wraplength=1040, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        ttk.Label(qpanel, textvariable=self.coach_question_var, wraplength=1120, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=12, pady=(10, 6))
         self.coach_choice_frame = ttk.Frame(qpanel)
-        self.coach_choice_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 6))
+        self.coach_choice_frame.grid(row=1, column=0, sticky="ew", padx=12, pady=(0, 6))
         actions = ttk.Frame(qpanel)
-        actions.grid(row=2, column=0, sticky="ew", padx=10, pady=(2, 10))
-        ttk.Button(actions, text="Check Answer", style="Accent.TButton", command=self.check_coach_answer).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Show Answer", command=self.show_coach_answer).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Copy Explanation", command=self.copy_coach_explanation).pack(side="left", padx=(0, 8))
+        actions.grid(row=2, column=0, sticky="ew", padx=12, pady=(2, 10))
+        ttk.Button(actions, text="Check", style="Accent.TButton", command=self.check_coach_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Show", command=self.show_coach_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Copy", command=self.copy_coach_explanation).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Search Terms", command=self.search_coach_terms).pack(side="left", padx=(0, 8))
 
-        detail = self._panel(parent, "Answer review")
-        self.coach_feedback_text = tk.Text(detail, height=18)
-        self.coach_feedback_text.pack(fill="x", padx=10, pady=10)
+        detail = self._panel(parent, "Review")
+        self.coach_feedback_text = tk.Text(detail, height=14)
+        self.coach_feedback_text.pack(fill="x", padx=12, pady=8)
         style_text_widget(self.coach_feedback_text, self.colors)
         bind_inner_mousewheel(self.coach_feedback_text)
         self.coach_feedback_text.configure(state="disabled")
@@ -750,31 +743,28 @@ class PlaybooksApp:
         self.start_coach_set()
 
     def _build_question_packs_tab(self, parent):
-        intro = self._panel(parent, "Question Packs")
+        intro = self._panel(parent, "Packs")
         ttk.Label(
             intro,
-            text=(
-                "Import downloadable Coach Mode question packs here. Built-in ByteCase questions remain available, "
-                "and imported packs stay local under the ByteCase playbooks question_packs folder."
-            ),
-            wraplength=1040,
-        ).pack(anchor="w", padx=10, pady=(8, 4))
+            text="Import, validate, enable, or disable local Coach question packs. Built-in ByteCase questions stay separate.",
+            wraplength=1120,
+        ).pack(anchor="w", padx=12, pady=(7, 3))
         ttk.Label(
             intro,
             text="Only import question packs from sources you trust. Packs are educational content and do not replace agency policy, legal authority, formal training, or examiner judgment.",
-            wraplength=1040,
+            wraplength=1120,
             style="Muted.TLabel",
-        ).pack(anchor="w", padx=10, pady=(0, 8))
+        ).pack(anchor="w", padx=12, pady=(0, 7))
 
         actions = self._panel(parent, "Pack actions")
-        ttk.Button(actions, text="Import Question Pack", style="Accent.TButton", command=self.import_question_pack_file).pack(side="left", padx=10, pady=10)
-        ttk.Button(actions, text="Validate Pack File", command=self.validate_question_pack_file_dialog).pack(side="left", padx=(0, 10), pady=10)
-        ttk.Button(actions, text="Enable Selected", command=lambda: self.set_selected_question_pack_enabled(True)).pack(side="left", padx=(0, 10), pady=10)
-        ttk.Button(actions, text="Disable Selected", command=lambda: self.set_selected_question_pack_enabled(False)).pack(side="left", padx=(0, 10), pady=10)
-        ttk.Button(actions, text="Open Pack Folder", command=self.open_question_pack_folder).pack(side="left", padx=(0, 10), pady=10)
-        ttk.Button(actions, text="Refresh", command=self.refresh_question_pack_list).pack(side="left", padx=(0, 10), pady=10)
+        ttk.Button(actions, text="Import", style="Accent.TButton", command=self.import_question_pack_file).pack(side="left", padx=12, pady=8)
+        ttk.Button(actions, text="Validate", command=self.validate_question_pack_file_dialog).pack(side="left", padx=(0, 10), pady=8)
+        ttk.Button(actions, text="Enable", command=lambda: self.set_selected_question_pack_enabled(True)).pack(side="left", padx=(0, 10), pady=8)
+        ttk.Button(actions, text="Disable", command=lambda: self.set_selected_question_pack_enabled(False)).pack(side="left", padx=(0, 10), pady=8)
+        ttk.Button(actions, text="Open Folder", command=self.open_question_pack_folder).pack(side="left", padx=(0, 10), pady=8)
+        ttk.Button(actions, text="Refresh", command=self.refresh_question_pack_list).pack(side="left", padx=(0, 10), pady=8)
 
-        body = self._panel(parent, "Installed packs")
+        body = self._panel(parent, "Installed")
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=1)
         self.question_pack_records = []
@@ -787,33 +777,33 @@ class PlaybooksApp:
         self.question_pack_tree.column("pack", width=360)
         self.question_pack_tree.column("version", width=110, stretch=False)
         self.question_pack_tree.column("questions", width=90, stretch=False)
-        self.question_pack_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.question_pack_tree.grid(row=0, column=0, sticky="nsew", padx=12, pady=8)
         self.question_pack_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_question_pack_detail())
         bind_inner_mousewheel(self.question_pack_tree)
         self.question_pack_detail_text = tk.Text(body, height=14)
-        self.question_pack_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.question_pack_detail_text.grid(row=0, column=1, sticky="nsew", padx=12, pady=8)
         style_text_widget(self.question_pack_detail_text, self.colors)
         bind_inner_mousewheel(self.question_pack_detail_text)
         self.question_pack_detail_text.configure(state="disabled")
 
-        footer = self._panel(parent, "Pack folder")
+        footer = self._panel(parent, "Folder")
         self.question_pack_folder_var = tk.StringVar(value=str(question_pack_directory()))
-        ttk.Label(footer, textvariable=self.question_pack_folder_var, wraplength=1040, style="Muted.TLabel").pack(anchor="w", padx=10, pady=8)
+        ttk.Label(footer, textvariable=self.question_pack_folder_var, wraplength=1120, style="Muted.TLabel").pack(anchor="w", padx=12, pady=8)
         self.refresh_question_pack_list()
 
     def _build_reference_tab(self, parent):
-        search_panel = self._panel(parent, "Search playbooks and glossary")
+        search_panel = self._panel(parent, "Search")
         search_panel.columnconfigure(1, weight=1)
-        ttk.Label(search_panel, text="Search").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(search_panel, text="Search").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.reference_query_var = tk.StringVar()
         entry = ttk.Entry(search_panel, textvariable=self.reference_query_var)
-        entry.grid(row=0, column=1, sticky="ew", padx=10, pady=8)
+        entry.grid(row=0, column=1, sticky="ew", padx=12, pady=8)
         entry.bind("<Return>", lambda _e: self.run_reference_search())
-        ttk.Button(search_panel, text="Search", style="Accent.TButton", command=self.run_reference_search).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Button(search_panel, text="Clear", command=self.clear_reference_search).grid(row=0, column=3, padx=10, pady=8)
-        ttk.Label(search_panel, text="Search examples: RAM, hash, write blocker, browser, Volatility, USB, password, actor, command, attribution", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=10, pady=(0, 8))
+        ttk.Button(search_panel, text="Search", style="Accent.TButton", command=self.run_reference_search).grid(row=0, column=2, padx=12, pady=8)
+        ttk.Button(search_panel, text="Clear", command=self.clear_reference_search).grid(row=0, column=3, padx=12, pady=8)
+        ttk.Label(search_panel, text="Search examples: RAM, hash, write blocker, browser, Volatility, USB, password, actor, command, attribution", style="Muted.TLabel").grid(row=1, column=1, columnspan=3, sticky="w", padx=12, pady=(0, 7))
 
-        body = self._panel(parent, "Reference results")
+        body = self._panel(parent, "Results")
         body.columnconfigure(0, weight=1)
         body.columnconfigure(1, weight=2)
         body.rowconfigure(0, weight=1)
@@ -822,46 +812,46 @@ class PlaybooksApp:
         self.reference_tree.heading("type", text="Type")
         self.reference_tree.heading("title", text="Result")
         self.reference_tree.column("type", width=120, stretch=False)
-        self.reference_tree.column("title", width=360)
-        self.reference_tree.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
+        self.reference_tree.column("title", width=420)
+        self.reference_tree.grid(row=0, column=0, sticky="nsew", padx=12, pady=8)
         self.reference_tree.bind("<<TreeviewSelect>>", lambda _e: self.show_reference_result())
         bind_inner_mousewheel(self.reference_tree)
         self.reference_detail_text = tk.Text(body, height=18)
-        self.reference_detail_text.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.reference_detail_text.grid(row=0, column=1, sticky="nsew", padx=12, pady=8)
         style_text_widget(self.reference_detail_text, self.colors)
         bind_inner_mousewheel(self.reference_detail_text)
         self.reference_detail_text.configure(state="disabled")
         actions = ttk.Frame(body)
-        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Open Playbook", command=self.open_reference_playbook).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Show Glossary", command=self.show_all_glossary).pack(side="left", padx=(0, 8))
+        actions.grid(row=1, column=0, columnspan=2, sticky="ew", padx=12, pady=(0, 10))
+        ttk.Button(actions, text="Open", command=self.open_reference_playbook).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Glossary", command=self.show_all_glossary).pack(side="left", padx=(0, 8))
 
-        starter = self._panel(parent, "What Playbooks is for")
+        starter = self._panel(parent, "Boundary")
         text = (
             "ByteCase Playbooks is the explainer layer. It helps new examiners, occasional examiners, or anyone needing a refresher understand why steps matter, what order to think in, what tools may apply, what artifacts are common, and what to document.\n\n"
             "ByteCase Workflow will track case progress. Playbooks explains the work."
         )
-        ttk.Label(starter, text=text, wraplength=1040).pack(anchor="w", padx=10, pady=10)
+        ttk.Label(starter, text=text, wraplength=1120).pack(anchor="w", padx=12, pady=8)
         self.show_all_glossary()
 
     def _build_settings_tab(self, parent):
         output = self._panel(parent, "Output")
         output.columnconfigure(1, weight=1)
-        ttk.Label(output, text="ByteCase Output Root").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(output, text="ByteCase Output Root").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.output_root_var = tk.StringVar(value=self.settings.get("output", {}).get("output_root", ""))
-        ttk.Entry(output, textvariable=self.output_root_var).grid(row=0, column=1, sticky="ew", padx=10, pady=8)
-        ttk.Button(output, text="Browse", command=self.browse_output_root).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Label(output, text=f"Leave blank to use {DEFAULT_OUTPUT_ROOT}", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=10, pady=(0, 8))
+        ttk.Entry(output, textvariable=self.output_root_var).grid(row=0, column=1, sticky="ew", padx=12, pady=8)
+        ttk.Button(output, text="Browse", command=self.browse_output_root).grid(row=0, column=2, padx=12, pady=8)
+        ttk.Label(output, text=f"Leave blank to use {DEFAULT_OUTPUT_ROOT}", style="Muted.TLabel").grid(row=1, column=1, sticky="w", padx=12, pady=(0, 7))
         self.export_txt_var = tk.BooleanVar(value=self.settings.get("output", {}).get("export_txt", True))
         self.export_docx_var = tk.BooleanVar(value=self.settings.get("output", {}).get("export_docx", True))
-        ttk.Checkbutton(output, text="Export TXT", variable=self.export_txt_var).grid(row=2, column=1, sticky="w", padx=10, pady=4)
-        ttk.Checkbutton(output, text="Export DOCX", variable=self.export_docx_var).grid(row=3, column=1, sticky="w", padx=10, pady=4)
+        ttk.Checkbutton(output, text="Export TXT", variable=self.export_txt_var).grid(row=2, column=1, sticky="w", padx=12, pady=4)
+        ttk.Checkbutton(output, text="Export DOCX", variable=self.export_docx_var).grid(row=3, column=1, sticky="w", padx=12, pady=4)
 
         appearance = self._panel(parent, "Appearance")
-        ttk.Label(appearance, text="Theme").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        ttk.Label(appearance, text="Theme").grid(row=0, column=0, sticky="w", padx=12, pady=8)
         self.theme_var = tk.StringVar(value=self.settings.get("appearance", {}).get("theme", "system"))
-        ttk.Combobox(appearance, textvariable=self.theme_var, values=["system", "dark", "light"], state="readonly", width=20).grid(row=0, column=1, sticky="w", padx=10, pady=8)
-        ttk.Button(parent, text="Save Settings", style="Accent.TButton", command=self.save_settings_action).pack(anchor="w", padx=10, pady=10)
+        ttk.Combobox(appearance, textvariable=self.theme_var, values=["system", "dark", "light"], state="readonly", width=20).grid(row=0, column=1, sticky="w", padx=12, pady=8)
+        ttk.Button(parent, text="Save", style="Accent.TButton", command=self.save_settings_action).pack(anchor="w", padx=12, pady=8)
 
     def populate_playbook_list(self):
         selected_category = self.category_var.get()
