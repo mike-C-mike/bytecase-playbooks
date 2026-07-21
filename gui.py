@@ -122,26 +122,41 @@ class PlaybooksApp:
         self.notebook.pack(fill="both", expand=True, padx=14, pady=(0, 12))
 
         self.start_tab = ScrollableFrame(self.notebook, self.colors)
-        self.playbook_tab = ScrollableFrame(self.notebook, self.colors)
-        self.decision_tab = ScrollableFrame(self.notebook, self.colors)
+        self.workbench_tab = ttk.Frame(self.notebook)
+        self.practice_tab = ttk.Frame(self.notebook)
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
-        self.artifact_tab = ScrollableFrame(self.notebook, self.colors)
-        self.scenario_tab = ScrollableFrame(self.notebook, self.colors)
-        self.coach_tab = ScrollableFrame(self.notebook, self.colors)
-        self.question_packs_tab = ScrollableFrame(self.notebook, self.colors)
-        self.reference_tab = ScrollableFrame(self.notebook, self.colors)
-        self.settings_tab = ScrollableFrame(self.notebook, self.colors)
+        self.library_tab = ttk.Frame(self.notebook)
 
         self.notebook.add(self.start_tab, text="Start")
-        self.notebook.add(self.decision_tab, text="Guide Me")
-        self.notebook.add(self.playbook_tab, text="Playbook")
-        self.notebook.add(self.session_tab, text="Progress / Export")
-        self.notebook.add(self.artifact_tab, text="Artifact Areas")
-        self.notebook.add(self.scenario_tab, text="Scenario Coach")
-        self.notebook.add(self.coach_tab, text="Coach Mode")
-        self.notebook.add(self.question_packs_tab, text="Question Packs")
-        self.notebook.add(self.reference_tab, text="Reference")
-        self.notebook.add(self.settings_tab, text="Settings")
+        self.notebook.add(self.workbench_tab, text="Reference Workbench")
+        self.notebook.add(self.practice_tab, text="Practice Drills")
+        self.notebook.add(self.session_tab, text="Session Export")
+        self.notebook.add(self.library_tab, text="Library / Settings")
+
+        self.workbench_notebook = ttk.Notebook(self.workbench_tab)
+        self.workbench_notebook.pack(fill="both", expand=True)
+        self.decision_tab = ScrollableFrame(self.workbench_notebook, self.colors)
+        self.playbook_tab = ScrollableFrame(self.workbench_notebook, self.colors)
+        self.artifact_tab = ScrollableFrame(self.workbench_notebook, self.colors)
+        self.scenario_tab = ScrollableFrame(self.workbench_notebook, self.colors)
+        self.workbench_notebook.add(self.decision_tab, text="Guide Me")
+        self.workbench_notebook.add(self.playbook_tab, text="Playbook")
+        self.workbench_notebook.add(self.artifact_tab, text="Artifact Areas")
+        self.workbench_notebook.add(self.scenario_tab, text="Scenario Coach")
+
+        self.practice_notebook = ttk.Notebook(self.practice_tab)
+        self.practice_notebook.pack(fill="both", expand=True)
+        self.coach_tab = ScrollableFrame(self.practice_notebook, self.colors)
+        self.question_packs_tab = ScrollableFrame(self.practice_notebook, self.colors)
+        self.practice_notebook.add(self.coach_tab, text="Coach Mode")
+        self.practice_notebook.add(self.question_packs_tab, text="Question Packs")
+
+        self.library_notebook = ttk.Notebook(self.library_tab)
+        self.library_notebook.pack(fill="both", expand=True)
+        self.reference_tab = ScrollableFrame(self.library_notebook, self.colors)
+        self.settings_tab = ScrollableFrame(self.library_notebook, self.colors)
+        self.library_notebook.add(self.reference_tab, text="Reference Library")
+        self.library_notebook.add(self.settings_tab, text="Settings")
 
         self._build_start_tab(self.start_tab.frame)
         self._build_decision_tab(self.decision_tab.frame)
@@ -159,6 +174,44 @@ class PlaybooksApp:
         panel.pack(fill="x", padx=10, pady=8)
         return panel
 
+    def show_start_page(self):
+        self.notebook.select(self.start_tab)
+
+    def show_guide_page(self):
+        self.notebook.select(self.workbench_tab)
+        self.workbench_notebook.select(self.decision_tab)
+
+    def show_playbook_page(self):
+        self.notebook.select(self.workbench_tab)
+        self.workbench_notebook.select(self.playbook_tab)
+
+    def show_artifact_page(self):
+        self.notebook.select(self.workbench_tab)
+        self.workbench_notebook.select(self.artifact_tab)
+
+    def show_scenario_page(self):
+        self.notebook.select(self.workbench_tab)
+        self.workbench_notebook.select(self.scenario_tab)
+
+    def show_coach_page(self):
+        self.notebook.select(self.practice_tab)
+        self.practice_notebook.select(self.coach_tab)
+
+    def show_question_packs_page(self):
+        self.notebook.select(self.practice_tab)
+        self.practice_notebook.select(self.question_packs_tab)
+
+    def show_session_page(self):
+        self.notebook.select(self.session_tab)
+
+    def show_reference_page(self):
+        self.notebook.select(self.library_tab)
+        self.library_notebook.select(self.reference_tab)
+
+    def show_settings_page(self):
+        self.notebook.select(self.library_tab)
+        self.library_notebook.select(self.settings_tab)
+
     def _build_start_tab(self, parent):
         intro = self._panel(parent, "What do you need help with?")
         intro.columnconfigure(1, weight=1)
@@ -168,8 +221,26 @@ class PlaybooksApp:
         mode.grid(row=0, column=1, sticky="w", padx=10, pady=8)
         mode.bind("<<ComboboxSelected>>", lambda _e: self.set_mode())
         ttk.Button(intro, text="Boundary", command=self.show_boundary).grid(row=0, column=2, padx=10, pady=8)
-        ttk.Button(intro, text="Guide Me", style="Accent.TButton", command=lambda: self.notebook.select(self.decision_tab)).grid(row=0, column=3, padx=10, pady=8)
-        ttk.Button(intro, text="Search Reference", command=lambda: self.notebook.select(self.reference_tab)).grid(row=0, column=4, padx=10, pady=8)
+        ttk.Button(intro, text="Guide Me", style="Accent.TButton", command=self.show_guide_page).grid(row=0, column=3, padx=10, pady=8)
+        ttk.Button(intro, text="Search Reference", command=self.show_reference_page).grid(row=0, column=4, padx=10, pady=8)
+
+        lanes = self._panel(parent, "Main paths")
+        lanes.columnconfigure(0, weight=1)
+        lanes.columnconfigure(1, weight=1)
+        lanes.columnconfigure(2, weight=1)
+        lanes.columnconfigure(3, weight=1)
+        path_items = [
+            ("Reference Workbench", "Use Guide Me, Playbook steps, Artifact Areas, or Scenario Coach while thinking through a process.", self.show_guide_page),
+            ("Practice Drills", "Run Coach Mode questions or manage downloaded question packs.", self.show_coach_page),
+            ("Session Export", "Save a non-case Playbooks refresher session as JSON, TXT, or DOCX.", self.show_session_page),
+            ("Library / Settings", "Search terms and references, or adjust local settings.", self.show_reference_page),
+        ]
+        for idx, (title, desc, command) in enumerate(path_items):
+            card = ttk.Frame(lanes, style="Panel.TFrame")
+            card.grid(row=0, column=idx, sticky="nsew", padx=8, pady=10)
+            ttk.Label(card, text=title, style="Header.TLabel", wraplength=230).pack(anchor="w", padx=10, pady=(10, 4))
+            ttk.Label(card, text=desc, style="Muted.TLabel", wraplength=230).pack(anchor="w", padx=10, pady=(0, 8))
+            ttk.Button(card, text="Open", command=command).pack(anchor="w", padx=10, pady=(0, 10))
 
         selector = self._panel(parent, "Select a playbook")
         selector.columnconfigure(0, weight=1)
@@ -201,14 +272,14 @@ class PlaybooksApp:
         ttk.Label(quick, textvariable=self.start_summary_var).pack(anchor="w", padx=10, pady=8)
         actions = ttk.Frame(quick)
         actions.pack(fill="x", padx=10, pady=(0, 10))
-        ttk.Button(actions, text="Continue", command=lambda: self.notebook.select(self.playbook_tab)).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Guide Me", command=lambda: self.notebook.select(self.decision_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Continue", command=self.show_playbook_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Guide Me", command=self.show_guide_page).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Open JSON", command=self.open_session_json).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Artifact Areas", command=lambda: self.notebook.select(self.artifact_tab)).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Scenario Coach", command=lambda: self.notebook.select(self.scenario_tab)).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Coach Mode", command=lambda: self.notebook.select(self.coach_tab)).pack(side="left", padx=(0, 8))
-        ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Save Session", command=self.show_session_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Artifact Areas", command=self.show_artifact_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Scenario Coach", command=self.show_scenario_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Coach Mode", command=self.show_coach_page).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Reference", command=self.show_reference_page).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
         intro = self._panel(parent, "Guide Me")
@@ -725,12 +796,12 @@ class PlaybooksApp:
         self.current_step_index = 1
         self.sync_current_step_index()
         self.refresh_all()
-        self.notebook.select(self.playbook_tab)
+        self.show_playbook_page()
 
     def quick_mode(self, mode):
         self.mode_var.set(mode)
         self.set_mode()
-        self.notebook.select(self.playbook_tab)
+        self.show_playbook_page()
 
     def set_mode(self):
         self.session["mode"] = self.mode_var.get()
@@ -1104,7 +1175,7 @@ class PlaybooksApp:
             self.session = load_session(path)
             self.current_step_index = int(self.session.get("current_step_index", 1))
             self.refresh_all()
-            self.notebook.select(self.playbook_tab)
+            self.show_playbook_page()
         except Exception as exc:
             messagebox.showerror("Could not open session", str(exc))
 
@@ -1178,7 +1249,7 @@ class PlaybooksApp:
         if not item:
             return
         self.reference_query_var.set(item.get("title", ""))
-        self.notebook.select(self.reference_tab)
+        self.show_reference_page()
         self.run_reference_search()
 
     def selected_question(self):
@@ -1388,7 +1459,7 @@ class PlaybooksApp:
         self.current_step_index = 1
         self.sync_current_step_index()
         self.refresh_all()
-        self.notebook.select(self.playbook_tab)
+        self.show_playbook_page()
 
     def populate_scenario_list(self):
         if not hasattr(self, "scenario_list"):
@@ -1459,7 +1530,7 @@ class PlaybooksApp:
             self.current_step_index = 1
             self.sync_current_step_index()
             self.refresh_all()
-            self.notebook.select(self.playbook_tab)
+            self.show_playbook_page()
         except Exception as exc:
             messagebox.showerror("Could not open playbook", str(exc))
 
@@ -1470,7 +1541,7 @@ class PlaybooksApp:
         terms = scenario.get("related_reference_terms", [])
         query = terms[0] if terms else scenario.get("title", "")
         self.reference_query_var.set(query)
-        self.notebook.select(self.reference_tab)
+        self.show_reference_page()
         self.run_reference_search()
 
 
@@ -1816,7 +1887,7 @@ class PlaybooksApp:
         terms = item.get("search_terms", [])
         query = terms[0] if terms else item.get("topic", "")
         self.reference_query_var.set(query)
-        self.notebook.select(self.reference_tab)
+        self.show_reference_page()
         self.run_reference_search()
 
     def open_coach_scenario(self):
@@ -1826,7 +1897,7 @@ class PlaybooksApp:
         scenario_id = item.get("related_scenario_id", "")
         for idx, scenario in enumerate(SCENARIO_CARDS):
             if scenario.get("id") == scenario_id:
-                self.notebook.select(self.scenario_tab)
+                self.show_scenario_page()
                 try:
                     self.scenario_list.selection_clear(0, tk.END)
                     self.scenario_list.selection_set(idx)
@@ -1886,7 +1957,7 @@ class PlaybooksApp:
             self.mode_var.set(mode)
             self.sync_current_step_index()
             self.refresh_all()
-            self.notebook.select(self.playbook_tab)
+            self.show_playbook_page()
         except Exception as exc:
             messagebox.showerror("Could not open playbook", str(exc))
 
@@ -1911,4 +1982,3 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
-

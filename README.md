@@ -1,27 +1,26 @@
 # ByteCase Playbooks
 
-**Guided Examiner Reference and Learning Companion**  
+**Guided Examiner Reference and Readiness Companion**  
 Part of the ByteCase toolset by Forensics Byte.  
 https://byte-case.com
 
 ## Version
 
-v0.9.1
+v0.9.3
 
 ## Purpose
 
-ByteCase Playbooks is a click-based reference, refresher, and learning tool for digital evidence examiners. It is designed for real-time reference during an investigation or as a downtime learning companion for new or occasional examiners.
+ByteCase Playbooks is a click-based reference and readiness tool for digital evidence examiners. It is designed for real-time reference during a task, quick refresher learning, and judgment-focused practice.
 
 It helps answer questions such as:
 
-- What kind of workflow am I dealing with?
+- What workflow am I dealing with?
+- What should I understand before I act?
 - Why does this step matter?
-- Why does this step come before another step?
 - What artifact areas may commonly matter?
-- What tools may be used for this area?
 - What should I document?
 - What should I avoid overclaiming?
-- What does this step not prove by itself?
+- What does this artifact or step not prove by itself?
 - What extra context may help connect device activity to a person?
 
 ## What ByteCase Playbooks is not
@@ -30,10 +29,43 @@ ByteCase Playbooks does not perform acquisition, extraction, parsing, analysis, 
 
 It is not the same as ByteCase Workflow.
 
-- **ByteCase Playbooks explains the work.**
+- **ByteCase Playbooks explains and reinforces the work.**
 - **ByteCase Workflow tracks the work.**
 
-## Included playbooks
+## v0.9.3 updates
+
+v0.9.3 is a navigation consolidation sprint. It reduces top-level tab bloat and groups related tools into clearer lanes.
+
+Top-level navigation is now organized as:
+
+- **Start**
+- **Reference Workbench**
+- **Practice Drills**
+- **Session Export**
+- **Library / Settings**
+
+The older individual tabs are preserved as grouped sub-tabs:
+
+### Reference Workbench
+
+- Guide Me
+- Playbook
+- Artifact Areas
+- Scenario Coach
+
+### Practice Drills
+
+- Coach Mode
+- Question Packs
+
+### Library / Settings
+
+- Reference Library
+- Settings
+
+This keeps Playbooks focused as a reference and readiness product without removing current functionality.
+
+## Current built-in playbooks
 
 This release includes six built-in playbooks:
 
@@ -44,24 +76,37 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.9.1 updates
+## Major capability areas
 
-v0.9.1 expands Coach Mode into a more useful drill workflow.
+### Field Reference
 
-Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
+A concise real-time reference mode for when the examiner needs the immediate order of thinking, cautions, and documentation reminders.
 
-Changes include:
+### Learning / Refresher
 
-- Added selectable drill size: All, 5, 10, 15, or 20 questions
-- Added drill order control: In order or Shuffle
-- Added missed-question tracking
-- Added Review Missed mode
-- Added Coach Drill Summary popup
-- Added Copy Missed / Summary action
-- Preserved topic and difficulty filtering
-- Preserved answer checking, explanations, follow-up questions, and guardrails
-- Preserved shortcuts to related Scenario Coach cards and reference terms
-- Preserved Playbooks as a non-case reference/refresher module
+A deeper mode for training, downtime review, or examiners who do not perform a task often.
+
+### Scenario Coach
+
+Short scenario guidance for careful interpretation. Scenario Coach focuses on what an artifact may support, what it does not prove, what supporting context may help, and what to document.
+
+### Coach Mode
+
+Question-and-answer practice for examiner judgment. Coach Mode supports topic filtering, difficulty levels, drill count, shuffle/in-order mode, answer explanations, missed-question review, and summary/copy support.
+
+### Question Packs
+
+Downloadable/importable Coach Mode question packs can be validated, imported, enabled, disabled, and selected from Coach Mode. Imported packs are stored locally under:
+
+```text
+ByteCase\playbooks\question_packs\
+```
+
+Built-in ByteCase questions remain separate from imported/custom question packs.
+
+### Reference Library
+
+The Reference Library searches across glossary terms, playbooks, artifact areas, scenario cards, investigative questions, and Coach Mode content.
 
 ## Coach Mode topics
 
@@ -76,24 +121,6 @@ Starter question topics include:
 - Timestamps
 - Windows / File Activity
 - Validation / Tool Confidence
-
-
-## Coach drills and missed-question review
-
-Coach Mode can now be used as a short practice drill instead of only a linear question list. The examiner can choose a topic, difficulty, question count, and order. After checking answers, missed questions can be loaded into a focused review set.
-
-Drill controls include:
-
-- Topic
-- Difficulty
-- Count
-- Order
-- Start / Reset
-- Review Missed
-- Summary
-- Copy Missed
-
-The drill score and missed-question review are local to the current app session. Coach Mode remains a refresher and learning tool. It does not score case work and does not write case notes.
 
 ## Attribution / use-context mindset
 
@@ -110,44 +137,6 @@ Who performed the human action
 ```
 
 For example, a command appearing on a device can support that the command existed or was executed in a certain environment, but it does not automatically prove which person typed or initiated it. The examiner should look for supporting context such as device possession, account/session information, password knowledge, admissions, remote-access indicators, cloud sync behavior, automation, malware, and corroborating physical or witness context when attribution matters.
-
-An admission such as being the only person who knows a device password can support access/control context, but it should still be documented accurately and weighed with the rest of the evidence.
-
-## Main modes
-
-### Field Reference
-
-A concise real-time reference mode for when the examiner needs the immediate order of thinking, cautions, and documentation reminders.
-
-### Learning / Refresher
-
-A deeper mode for training, downtime review, or examiners who do not perform a task often.
-
-## Step card design
-
-Each playbook step can include:
-
-- Field focus
-- Learning detail
-- Why this matters
-- Possible tools
-- Common artifacts / outputs
-- Cautions
-- Does-not-prove reminders
-- What to document
-- Command examples, where useful
-- Optional step reference notes
-
-Each step has quick explanation buttons:
-
-- Why?
-- Tools
-- Artifacts
-- Cautions
-- Document
-- Commands
-- Does Not Prove
-- Use Context
 
 ## Output structure
 
@@ -178,130 +167,15 @@ Coach Mode practice progress is currently in-memory only and is not written to c
 Runtime:
 
 - Python standard library
-- Tkinter
-- python-docx, MIT License
+- Tkinter / Tcl-Tk
+- python-docx for DOCX export
 
-No evidence-processing, parsing, acquisition, extraction, or analysis dependency is included.
+Packaging:
 
-## Recommended commit message
+- PyInstaller, optional for building a Windows EXE
 
-```text
-Add Playbooks coach drills and missed review
-```
+See `DEPENDENCIES.md` for license notes.
 
-## Recommended commit description
+## Suggested next work
 
-```text
-Adds Coach Mode drill controls for question count and order, missed-question tracking, Review Missed mode, a drill summary popup, and Copy Missed/Summary support while preserving topic/difficulty filtering, Scenario Coach shortcuts, and Playbooks as a non-case reference and refresher tool.
-```
-
-## Coach difficulty levels
-
-Coach Mode now supports three examiner experience levels for each major realm:
-
-- **Novice** - baseline safety, vocabulary, and overclaim prevention.
-- **Experienced** - context-building, source comparison, and documentation judgment.
-- **Expert** - ambiguity handling, conflicting artifacts, source limitations, and stronger corroboration questions.
-
-The intent is to let a new examiner start safely while giving a more practiced examiner deeper scenario questions without turning Playbooks into a certification exam or case-tracking tool.
-
-
-## v0.9.1 question-pack organization
-
-v0.9.1 reorganizes Coach Mode questions into modular question packs. Coach questions now live in the `coach_questions/` folder instead of being embedded directly in `playbook_data.py`. This keeps the main playbook content easier to maintain and leaves room for fast expansion into larger topic packs, agency-specific packs, lightning rounds, missed-question review, and future drill modes.
-
-Question pack foundation:
-
-```text
-coach_questions/
-  __init__.py
-  browser_file_activity.py
-  external_media.py
-  integrity_hashing.py
-  memory_ram.py
-  mobile.py
-  timestamps.py
-  use_access_context.py
-  validation_tool_confidence.py
-  windows_file_activity.py
-```
-
-Each pack exposes a `QUESTIONS` list. The package loader combines them into `COACH_QUESTIONS` for the existing Coach Mode interface.
-
-
-## v0.9.1 glossary repository refactor
-
-The glossary now lives in a dedicated `glossary/` package organized by topic. This keeps `playbook_data.py` focused on playbooks, scenarios, artifact areas, and decision helpers while allowing the glossary to grow into a larger examiner reference repository.
-
-The Coach question loader and Glossary loader both include custom JSON hooks for future Add/Edit/Remove screens:
-
-- `custom_coach_questions.json` or `ByteCase/playbooks/custom/coach_questions.json`
-- `custom_glossary_terms.json` or `ByteCase/playbooks/custom/glossary_terms.json`
-
-This is groundwork for future user-modifiable reference packs without another major refactor.
-
-Example starter files are included:
-
-- `custom_glossary_terms.example.json`
-- `custom_coach_questions.example.json`
-
-Copy either file to the matching live filename when future editable/custom pack support is needed.
-
-
-## v0.9.2 Question Pack Import Foundation
-
-v0.9.2 adds a first-pass downloadable Coach Mode question-pack system.
-
-New capabilities:
-
-- Added a dedicated **Question Packs** tab
-- Added JSON question-pack validation
-- Added local import into `ByteCase/playbooks/question_packs/`
-- Added installed-pack listing with metadata, version, publisher, question count, warnings, and errors
-- Added enable/disable support for imported packs
-- Added Coach Mode pack filtering alongside topic, difficulty, count, and order
-- Added `sample_question_pack.json` as a downloadable-pack template
-- Updated Coach Mode and Reference search to include imported pack questions
-
-Built-in ByteCase questions remain available and cannot be disabled from the Question Packs tab. Imported packs are treated as separate educational content. Only import packs from trusted sources.
-
-### Question pack format
-
-A pack is a JSON file with metadata and a `questions` list:
-
-```json
-{
-  "pack_name": "Use and Access Context Fundamentals",
-  "pack_id": "use-access-context-fundamentals",
-  "version": "1.0.0",
-  "publisher": "Forensics Byte",
-  "description": "Questions focused on careful interpretation of user access, account activity, possession, and attribution context.",
-  "license": "Forensics Byte educational content",
-  "questions": []
-}
-```
-
-Each question uses the same structure as the built-in Coach Mode questions:
-
-```json
-{
-  "id": "use-context-001",
-  "topic": "Use / Access Context",
-  "difficulty": "Novice",
-  "question": "A command appears in a console history artifact. What can you safely say?",
-  "choices": [
-    "The suspect typed the command.",
-    "The command appears to have been recorded or executed in that environment.",
-    "The named account holder performed the action.",
-    "The command proves intent."
-  ],
-  "answer_index": 1,
-  "explanation": "The artifact may support command activity, but it does not independently identify the human actor.",
-  "follow_up": [
-    "What possession, login, password, account, admission, or corroborating context would help?"
-  ],
-  "guardrail": "Device activity should be separated from human actor attribution unless supported by additional context.",
-  "search_terms": ["command", "actor", "attribution"]
-}
-```
-
+After this navigation cleanup, the next polish direction is to keep simplifying the Start page and reduce visual clutter inside each lane before adding another major capability.
