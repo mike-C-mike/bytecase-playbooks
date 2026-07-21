@@ -19,6 +19,7 @@ from playbook_data import (
     INVESTIGATIVE_QUESTIONS,
     CONTROL_CONTEXT_PROMPTS,
     SCENARIO_CARDS,
+    COACH_QUESTIONS,
     DECISION_PATHS,
     PLAYBOOKS,
     PLAYBOOK_BOUNDARY,
@@ -29,6 +30,7 @@ from playbook_data import (
     search_artifact_areas,
     search_investigative_questions,
     search_scenario_cards,
+    search_coach_questions,
 )
 from session_core import create_session, load_session, save_session_outputs, session_summary
 from settings_service import DEFAULT_OUTPUT_ROOT, get_output_root, load_settings, save_settings
@@ -89,6 +91,11 @@ class PlaybooksApp:
         self.last_export_folder = None
         self.step_check_vars = {}
         self.step_note_widgets = {}
+        self.coach_visible_questions = list(COACH_QUESTIONS)
+        self.current_coach_index = 0
+        self.coach_answer_var = tk.IntVar(value=-1)
+        self.coach_attempted = 0
+        self.coach_correct = 0
         self._build_ui()
         self.refresh_all()
 
@@ -108,6 +115,7 @@ class PlaybooksApp:
         self.session_tab = ScrollableFrame(self.notebook, self.colors)
         self.artifact_tab = ScrollableFrame(self.notebook, self.colors)
         self.scenario_tab = ScrollableFrame(self.notebook, self.colors)
+        self.coach_tab = ScrollableFrame(self.notebook, self.colors)
         self.reference_tab = ScrollableFrame(self.notebook, self.colors)
         self.settings_tab = ScrollableFrame(self.notebook, self.colors)
 
@@ -117,6 +125,7 @@ class PlaybooksApp:
         self.notebook.add(self.session_tab, text="Progress / Export")
         self.notebook.add(self.artifact_tab, text="Artifact Areas")
         self.notebook.add(self.scenario_tab, text="Scenario Coach")
+        self.notebook.add(self.coach_tab, text="Coach Mode")
         self.notebook.add(self.reference_tab, text="Reference")
         self.notebook.add(self.settings_tab, text="Settings")
 
@@ -126,6 +135,7 @@ class PlaybooksApp:
         self._build_session_tab(self.session_tab.frame)
         self._build_artifact_tab(self.artifact_tab.frame)
         self._build_scenario_tab(self.scenario_tab.frame)
+        self._build_coach_tab(self.coach_tab.frame)
         self._build_reference_tab(self.reference_tab.frame)
         self._build_settings_tab(self.settings_tab.frame)
 
@@ -182,6 +192,7 @@ class PlaybooksApp:
         ttk.Button(actions, text="Save Session", command=lambda: self.notebook.select(self.session_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Artifact Areas", command=lambda: self.notebook.select(self.artifact_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Scenario Coach", command=lambda: self.notebook.select(self.scenario_tab)).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Coach Mode", command=lambda: self.notebook.select(self.coach_tab)).pack(side="left", padx=(0, 8))
         ttk.Button(actions, text="Reference", command=lambda: self.notebook.select(self.reference_tab)).pack(side="left", padx=(0, 8))
 
     def _build_decision_tab(self, parent):
@@ -441,6 +452,57 @@ class PlaybooksApp:
         ).pack(anchor="w", padx=10, pady=10)
         self.populate_scenario_list()
 
+    def _build_coach_tab(self, parent):
+        intro = self._panel(parent, "Coach Mode")
+        ttk.Label(
+            intro,
+            text=(
+                "Use Coach Mode for quick examiner-thinking practice. It is designed as a refresher and learning aid: "
+                "read the scenario, choose the safest answer, then review the explanation and follow-up questions."
+            ),
+            wraplength=1040,
+        ).pack(anchor="w", padx=10, pady=(8, 4))
+        ttk.Label(
+            intro,
+            text="This is not a certification test and it does not score case work. It reinforces guardrails, attribution caution, documentation habits, and examiner judgment.",
+            wraplength=1040,
+            style="Muted.TLabel",
+        ).pack(anchor="w", padx=10, pady=(0, 8))
+
+        controls = self._panel(parent, "Practice set")
+        controls.columnconfigure(1, weight=1)
+        topics = ["All"] + sorted({item.get("topic", "General") for item in COACH_QUESTIONS})
+        ttk.Label(controls, text="Topic").grid(row=0, column=0, sticky="w", padx=10, pady=8)
+        self.coach_topic_var = tk.StringVar(value="All")
+        topic_box = ttk.Combobox(controls, textvariable=self.coach_topic_var, values=topics, state="readonly", width=32)
+        topic_box.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        topic_box.bind("<<ComboboxSelected>>", lambda _e: self.start_coach_set())
+        ttk.Button(controls, text="Start / Reset", style="Accent.TButton", command=self.start_coach_set).grid(row=0, column=2, padx=10, pady=8)
+        ttk.Button(controls, text="Next Question", command=self.next_coach_question).grid(row=0, column=3, padx=10, pady=8)
+        ttk.Button(controls, text="Open Scenario", command=self.open_coach_scenario).grid(row=0, column=4, padx=10, pady=8)
+        self.coach_score_var = tk.StringVar(value="Score: 0/0")
+        ttk.Label(controls, textvariable=self.coach_score_var, style="Muted.TLabel").grid(row=1, column=1, columnspan=4, sticky="w", padx=10, pady=(0, 8))
+
+        qpanel = self._panel(parent, "Question")
+        qpanel.columnconfigure(0, weight=1)
+        self.coach_question_var = tk.StringVar()
+        ttk.Label(qpanel, textvariable=self.coach_question_var, wraplength=1040, font=("Segoe UI", 11, "bold")).grid(row=0, column=0, sticky="w", padx=10, pady=(10, 6))
+        self.coach_choice_frame = ttk.Frame(qpanel)
+        self.coach_choice_frame.grid(row=1, column=0, sticky="ew", padx=10, pady=(0, 6))
+        actions = ttk.Frame(qpanel)
+        actions.grid(row=2, column=0, sticky="ew", padx=10, pady=(2, 10))
+        ttk.Button(actions, text="Check Answer", style="Accent.TButton", command=self.check_coach_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Show Answer", command=self.show_coach_answer).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Copy Explanation", command=self.copy_coach_explanation).pack(side="left", padx=(0, 8))
+        ttk.Button(actions, text="Search Terms", command=self.search_coach_terms).pack(side="left", padx=(0, 8))
+
+        detail = self._panel(parent, "Answer review")
+        self.coach_feedback_text = tk.Text(detail, height=18)
+        self.coach_feedback_text.pack(fill="x", padx=10, pady=10)
+        style_text_widget(self.coach_feedback_text, self.colors)
+        self.coach_feedback_text.configure(state="disabled")
+        self.refresh_coach_question()
+
     def _build_reference_tab(self, parent):
         search_panel = self._panel(parent, "Search playbooks and glossary")
         search_panel.columnconfigure(1, weight=1)
@@ -574,6 +636,8 @@ class PlaybooksApp:
         self.refresh_review()
         if hasattr(self, "decision_detail_text"):
             self.refresh_decision_detail()
+        if hasattr(self, "coach_question_var"):
+            self.refresh_coach_question()
 
     def refresh_playbook_header(self):
         pb = self.current_playbook()
@@ -1065,12 +1129,14 @@ class PlaybooksApp:
             self.reference_results.append({"type": "Question", "title": question.get("question", ""), "data": question})
         for scenario in search_scenario_cards(query):
             self.reference_results.append({"type": "Scenario", "title": scenario.get("title", ""), "data": scenario})
+        for question in search_coach_questions(query):
+            self.reference_results.append({"type": "Coach", "title": question.get("question", ""), "data": question})
         self.populate_reference_tree()
         if self.reference_results:
             self.reference_tree.selection_set("0")
             self.show_reference_result()
         else:
-            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, USB, command, password, control, actor, attribution, scenario, or artifact.")
+            self.set_text(self.reference_detail_text, "No reference results found. Try a broader term such as RAM, hash, browser, live, imaging, write blocker, USB, command, password, control, actor, attribution, scenario, coach, drill, or artifact.")
 
     def clear_reference_search(self):
         self.reference_query_var.set("")
@@ -1104,9 +1170,63 @@ class PlaybooksApp:
         if not result:
             return
         data = result.get("data", {})
-        if result.get("type") == "Glossary":
+        result_type = result.get("type")
+        if result_type == "Glossary":
             lines = [data.get("term", ""), f"Category: {data.get('category', '')}", "", data.get("definition", ""), "", "Related terms:"]
             lines.extend(f"- {item}" for item in data.get("related", []))
+        elif result_type == "Coach":
+            lines = [
+                "Coach Question",
+                f"Topic: {data.get('topic', '')}",
+                f"Difficulty: {data.get('difficulty', '')}",
+                "",
+                data.get("question", ""),
+                "",
+                "Choices:",
+            ]
+            for idx, choice in enumerate(data.get("choices", []), start=1):
+                prefix = "*" if idx - 1 == data.get("answer_index", 0) else " "
+                lines.append(f"{prefix} {idx}. {choice}")
+            lines.append("")
+            lines.append("Explanation:")
+            lines.append(data.get("explanation", ""))
+            lines.append("")
+            lines.append("Guardrail:")
+            lines.append(data.get("guardrail", ""))
+            lines.append("")
+            lines.append("Follow-up questions:")
+            lines.extend(f"- {item}" for item in data.get("follow_up", []))
+        elif result_type == "Artifact":
+            lines = [
+                data.get("title", ""),
+                f"Category: {data.get('category', '')}",
+                "",
+                "What this may help answer:",
+                data.get("helps_answer", ""),
+                "",
+                "Guardrails:",
+            ]
+            lines.extend(f"- {item}" for item in data.get("cautions", []))
+        elif result_type == "Question":
+            lines = [data.get("question", ""), "", "Mindset:", data.get("mindset", ""), "", "Look at:"]
+            lines.extend(f"- {item}" for item in data.get("look_at", []))
+            lines.append("")
+            lines.append("Guardrails:")
+            lines.extend(f"- {item}" for item in data.get("guardrails", []))
+        elif result_type == "Scenario":
+            lines = [
+                data.get("title", ""),
+                f"Category: {data.get('category', '')}",
+                "",
+                "Situation:",
+                data.get("situation", ""),
+                "",
+                "Plain-language takeaway:",
+                data.get("plain_language", ""),
+                "",
+                "Guardrails:",
+            ]
+            lines.extend(f"- {item}" for item in data.get("guardrails", []))
         else:
             lines = [data.get("title", ""), f"Category: {data.get('category', '')}", f"Level: {data.get('level', '')}", "", data.get("summary", ""), "", "Use when:"]
             lines.extend(f"- {item}" for item in data.get("use_when", []))
@@ -1217,6 +1337,144 @@ class PlaybooksApp:
         self.reference_query_var.set(query)
         self.notebook.select(self.reference_tab)
         self.run_reference_search()
+
+    def start_coach_set(self):
+        topic = self.coach_topic_var.get() if hasattr(self, "coach_topic_var") else "All"
+        if topic == "All":
+            self.coach_visible_questions = list(COACH_QUESTIONS)
+        else:
+            self.coach_visible_questions = [item for item in COACH_QUESTIONS if item.get("topic") == topic]
+        if not self.coach_visible_questions:
+            self.coach_visible_questions = list(COACH_QUESTIONS)
+        self.current_coach_index = 0
+        self.coach_answer_var.set(-1)
+        self.coach_attempted = 0
+        self.coach_correct = 0
+        self.refresh_coach_question()
+
+    def selected_coach_question(self):
+        if not getattr(self, "coach_visible_questions", None):
+            self.coach_visible_questions = list(COACH_QUESTIONS)
+        if not self.coach_visible_questions:
+            return None
+        self.current_coach_index = max(0, min(self.current_coach_index, len(self.coach_visible_questions) - 1))
+        return self.coach_visible_questions[self.current_coach_index]
+
+    def refresh_coach_question(self):
+        if not hasattr(self, "coach_question_var"):
+            return
+        item = self.selected_coach_question()
+        for child in self.coach_choice_frame.winfo_children():
+            child.destroy()
+        if not item:
+            self.coach_question_var.set("No coach questions are available.")
+            self.set_text(self.coach_feedback_text, "")
+            return
+        self.coach_answer_var.set(-1)
+        total = len(self.coach_visible_questions)
+        self.coach_question_var.set(
+            f"Question {self.current_coach_index + 1} of {total} | {item.get('topic', '')} | {item.get('difficulty', '')}\n{item.get('question', '')}"
+        )
+        for idx, choice in enumerate(item.get("choices", [])):
+            ttk.Radiobutton(
+                self.coach_choice_frame,
+                text=choice,
+                variable=self.coach_answer_var,
+                value=idx,
+            ).pack(anchor="w", padx=4, pady=3)
+        self.set_text(
+            self.coach_feedback_text,
+            "Choose the safest answer, then select Check Answer. Use Show Answer when studying without scoring.",
+        )
+        self.update_coach_score()
+
+    def update_coach_score(self):
+        if hasattr(self, "coach_score_var"):
+            total = len(getattr(self, "coach_visible_questions", []))
+            self.coach_score_var.set(f"Score: {self.coach_correct}/{self.coach_attempted} checked | Set size: {total}")
+
+    def format_coach_answer(self, item, selected_index=None, reveal_only=False):
+        if not item:
+            return "No question selected."
+        answer_index = item.get("answer_index", 0)
+        choices = item.get("choices", [])
+        correct_answer = choices[answer_index] if 0 <= answer_index < len(choices) else ""
+        lines = [
+            item.get("question", ""),
+            "",
+            "Best answer:",
+            f"{answer_index + 1}. {correct_answer}",
+            "",
+            "Why:",
+            item.get("explanation", ""),
+            "",
+            "Follow-up questions a senior examiner might ask:",
+        ]
+        lines.extend(f"- {value}" for value in item.get("follow_up", []))
+        lines.append("")
+        lines.append("Guardrail:")
+        lines.append(item.get("guardrail", ""))
+        lines.append("")
+        lines.append("Related search terms:")
+        lines.extend(f"- {value}" for value in item.get("search_terms", []))
+        if selected_index is not None and selected_index >= 0 and not reveal_only:
+            lines.insert(2, "Result: " + ("Correct" if selected_index == answer_index else "Not quite"))
+        return "\n".join(lines)
+
+    def check_coach_answer(self):
+        item = self.selected_coach_question()
+        if not item:
+            return
+        selected = self.coach_answer_var.get()
+        if selected < 0:
+            messagebox.showinfo("Choose an answer", "Select an answer first, or use Show Answer for study mode.")
+            return
+        self.coach_attempted += 1
+        if selected == item.get("answer_index", 0):
+            self.coach_correct += 1
+        self.set_text(self.coach_feedback_text, self.format_coach_answer(item, selected_index=selected))
+        self.update_coach_score()
+
+    def show_coach_answer(self):
+        item = self.selected_coach_question()
+        self.set_text(self.coach_feedback_text, self.format_coach_answer(item, reveal_only=True))
+
+    def next_coach_question(self):
+        if not getattr(self, "coach_visible_questions", None):
+            return
+        self.current_coach_index = (self.current_coach_index + 1) % len(self.coach_visible_questions)
+        self.refresh_coach_question()
+
+    def copy_coach_explanation(self):
+        self.copy_to_clipboard(self.format_coach_answer(self.selected_coach_question(), reveal_only=True), "Coach explanation")
+
+    def search_coach_terms(self):
+        item = self.selected_coach_question()
+        if not item:
+            return
+        terms = item.get("search_terms", [])
+        query = terms[0] if terms else item.get("topic", "")
+        self.reference_query_var.set(query)
+        self.notebook.select(self.reference_tab)
+        self.run_reference_search()
+
+    def open_coach_scenario(self):
+        item = self.selected_coach_question()
+        if not item:
+            return
+        scenario_id = item.get("related_scenario_id", "")
+        for idx, scenario in enumerate(SCENARIO_CARDS):
+            if scenario.get("id") == scenario_id:
+                self.notebook.select(self.scenario_tab)
+                try:
+                    self.scenario_list.selection_clear(0, tk.END)
+                    self.scenario_list.selection_set(idx)
+                    self.scenario_list.see(idx)
+                    self.show_scenario_detail()
+                except Exception:
+                    pass
+                return
+        messagebox.showinfo("No scenario linked", "This coach question does not have a linked Scenario Coach card yet.")
 
     def selected_decision_path(self):
         label = self.decision_path_var.get() if hasattr(self, "decision_path_var") else ""

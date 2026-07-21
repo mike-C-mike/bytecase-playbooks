@@ -6,7 +6,7 @@ collection, extraction, parsing, or analysis.
 
 APP_NAME = "ByteCase Playbooks"
 APP_SUBTITLE = "Guided Examiner Reference and Learning Companion"
-APP_VERSION = "0.7.0"
+APP_VERSION = "0.8.0"
 APP_ATTRIBUTION = "Part of the ByteCase toolset by Forensics Byte."
 APP_DOMAIN = "byte-case.com"
 
@@ -835,6 +835,305 @@ def get_decision_path(path_id):
         if path["id"] == path_id:
             return path
     return None
+
+
+
+COACH_QUESTIONS = [
+    {
+        "id": "cmd_actor_guardrail",
+        "topic": "Use / Access Context",
+        "difficulty": "Foundational",
+        "question": "A command appears in a console history or memory artifact. What is the safest initial statement?",
+        "choices": [
+            "The suspect typed the command.",
+            "The command activity appears in the reviewed source and should be evaluated with user/session context.",
+            "The named account holder must have run the command.",
+            "The command proves intent."
+        ],
+        "answer_index": 1,
+        "explanation": "The artifact may support that command activity was present in that data source. Connecting the activity to a specific person usually requires additional access, possession, account, session, admission, or corroborating context.",
+        "follow_up": [
+            "What user or session was active near the timestamp?",
+            "Could remote access, automation, malware, or another user explain the activity?",
+            "Is there possession, password, admission, camera, witness, or external context?"
+        ],
+        "guardrail": "A command artifact does not identify the human actor by itself.",
+        "related_scenario_id": "command_activity_actor",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["command", "actor", "attribution", "session", "password"]
+    },
+    {
+        "id": "password_control_context",
+        "topic": "Use / Access Context",
+        "difficulty": "Foundational",
+        "question": "A person states they are the only one who knows the device password. How should that be treated?",
+        "choices": [
+            "It proves they performed every action on the device.",
+            "It is irrelevant because digital artifacts matter more than statements.",
+            "It may support access/control context, but should be documented accurately and weighed with other evidence.",
+            "It proves the device contents belong to them."
+        ],
+        "answer_index": 2,
+        "explanation": "Exclusive password knowledge can be useful access/control context. It still does not prove every action, file, command, or message was performed by that person. Document the statement precisely and compare it with possession, account, session, timestamps, and corroborating artifacts.",
+        "follow_up": [
+            "Who had physical possession of the device?",
+            "Was the device locked or unlocked when recovered?",
+            "Do account/session artifacts line up with the statement?"
+        ],
+        "guardrail": "Control context supports attribution analysis, but it does not replace artifact review or corroboration.",
+        "related_scenario_id": "mobile_message_actor",
+        "related_playbook_id": "mobile_device_extraction",
+        "search_terms": ["password", "control", "access", "admission", "mobile"]
+    },
+    {
+        "id": "downloaded_file_viewed",
+        "topic": "Browser / File Activity",
+        "difficulty": "Foundational",
+        "question": "A browser download artifact shows a file was downloaded. What should the examiner avoid saying without more support?",
+        "choices": [
+            "The browser or process appears to have downloaded the file.",
+            "The file path, source, and timestamp should be documented.",
+            "The file was definitely opened, viewed, and understood by a specific person.",
+            "Additional file-open artifacts may be relevant."
+        ],
+        "answer_index": 2,
+        "explanation": "A download record can support that a file was obtained by a browser or process. Opening, viewing, knowledge, intent, and human actor identity usually require additional artifacts such as LNK, Jump Lists, recent-file records, app history, messages, admissions, or other context.",
+        "follow_up": [
+            "Is there file-open history?",
+            "Do recent files, shortcuts, application logs, or thumbnails support interaction?",
+            "Could sync, redirect, cache, or automation explain the artifact?"
+        ],
+        "guardrail": "Download evidence is not the same as viewing or knowledge evidence.",
+        "related_scenario_id": "downloaded_file_question",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["download", "browser", "file access", "knowledge"]
+    },
+    {
+        "id": "usb_transfer_guardrail",
+        "topic": "External Media",
+        "difficulty": "Foundational",
+        "question": "USB artifacts show an external drive was connected. What additional question should be asked before claiming file transfer?",
+        "choices": [
+            "Was there file access, copy, LNK, Jump List, shell, or application activity tied to that device?",
+            "Was the device from a popular manufacturer?",
+            "Does the drive have a high storage capacity?",
+            "Was the computer connected to power?"
+        ],
+        "answer_index": 0,
+        "explanation": "USB connection artifacts can help show a device was connected or recognized. File transfer usually needs other artifacts that link files, paths, timestamps, shell activity, application use, or copy behavior to the device.",
+        "follow_up": [
+            "What volume serial, drive letter, or friendly name was observed?",
+            "Are there LNK/Jump List references to removable paths?",
+            "What user/session context existed around the connection time?"
+        ],
+        "guardrail": "A USB connection does not prove file transfer or identify who connected it.",
+        "related_scenario_id": "usb_connected_question",
+        "related_playbook_id": "external_media_hash_copy_refresher",
+        "search_terms": ["USB", "external media", "transfer", "LNK", "Jump List"]
+    },
+    {
+        "id": "process_name_guardrail",
+        "topic": "Memory / RAM",
+        "difficulty": "Foundational",
+        "question": "A suspicious-looking process name appears in RAM analysis. What is the correct mindset?",
+        "choices": [
+            "The process name alone proves malware.",
+            "The process name is a lead that should be evaluated with path, parent process, command line, network, modules, and other context.",
+            "Any unusual process should be deleted from the evidence copy.",
+            "RAM process output cannot be useful."
+        ],
+        "answer_index": 1,
+        "explanation": "A process name can be a useful lead, but names are easy to mimic or misunderstand. Context such as executable path, parent/child relationships, command-line arguments, network connections, loaded modules, signatures, hashes, and corroborating artifacts matters.",
+        "follow_up": [
+            "What is the process path and parent process?",
+            "Are command-line arguments unusual?",
+            "Are there network connections or injected-code indicators?"
+        ],
+        "guardrail": "A process name by itself is not a malware conclusion.",
+        "related_scenario_id": "command_activity_actor",
+        "related_playbook_id": "memory_ram_analysis_volatility",
+        "search_terms": ["process", "RAM", "Volatility", "malware", "pstree"]
+    },
+    {
+        "id": "malfind_guardrail",
+        "topic": "Memory / RAM",
+        "difficulty": "Intermediate",
+        "question": "A memory plugin highlights possible injected code. What should the examiner say first?",
+        "choices": [
+            "The machine is confirmed compromised.",
+            "The plugin output is a potential lead that needs review, context, and corroboration.",
+            "The user intentionally installed malware.",
+            "No further documentation is needed."
+        ],
+        "answer_index": 1,
+        "explanation": "Detection-oriented plugin output can highlight suspicious memory regions, but it should be treated as a lead. Review process context, dumped content if appropriate, tool documentation, hashes, related artifacts, and examiner limitations before making stronger statements.",
+        "follow_up": [
+            "Which process and PID were involved?",
+            "What other artifacts support or refute the lead?",
+            "Is specialized malware analysis needed?"
+        ],
+        "guardrail": "Suspicious output does not automatically prove compromise, intent, or actor identity.",
+        "related_scenario_id": "command_activity_actor",
+        "related_playbook_id": "memory_ram_analysis_volatility",
+        "search_terms": ["malfind", "injection", "memory", "does not prove"]
+    },
+    {
+        "id": "login_actor_guardrail",
+        "topic": "Use / Access Context",
+        "difficulty": "Foundational",
+        "question": "A logon event exists for a named account. What should be avoided without more context?",
+        "choices": [
+            "The named account appears in a logon-related artifact.",
+            "The timestamp, account, source, and log source should be documented.",
+            "The account owner was physically present and personally performed every activity in that session.",
+            "Additional session and possession context may matter."
+        ],
+        "answer_index": 2,
+        "explanation": "A named account appearing in a logon artifact is not the same as proving the account owner was physically present. Consider shared credentials, remote access, saved credentials, service activity, malware, and corroborating context.",
+        "follow_up": [
+            "Was the logon interactive, remote, service, cached, or network-based?",
+            "Was there device possession or camera/witness context?",
+            "Were other users able to access the account or device?"
+        ],
+        "guardrail": "Account activity is not automatically human-actor identity.",
+        "related_scenario_id": "command_activity_actor",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["login", "logon", "account", "actor", "remote access"]
+    },
+    {
+        "id": "hash_meaning_guardrail",
+        "topic": "Integrity / Hashing",
+        "difficulty": "Foundational",
+        "question": "A file hash matches a prior manifest. What does that safely support?",
+        "choices": [
+            "The file content is consistent with the prior hashed copy.",
+            "The file is relevant to the case.",
+            "The file was created by the suspect.",
+            "The file proves intent."
+        ],
+        "answer_index": 0,
+        "explanation": "A matching hash supports content integrity/consistency between hashed copies. It does not explain meaning, relevance, source, creator, user knowledge, or intent.",
+        "follow_up": [
+            "Which algorithm was used?",
+            "What file/path/container was hashed?",
+            "Were acquisition and storage steps documented?"
+        ],
+        "guardrail": "Integrity is not interpretation.",
+        "related_scenario_id": "downloaded_file_question",
+        "related_playbook_id": "external_media_hash_copy_refresher",
+        "search_terms": ["hash", "integrity", "manifest", "verification"]
+    },
+    {
+        "id": "mobile_message_actor_guardrail",
+        "topic": "Mobile",
+        "difficulty": "Foundational",
+        "question": "A mobile extraction shows messages in an app. What is a safe starting interpretation?",
+        "choices": [
+            "The extraction contains message/app artifacts that should be reviewed with account, device, timestamp, and possession context.",
+            "The device owner personally typed every message.",
+            "The contact label proves the real identity of the other person.",
+            "Deleted messages always prove concealment."
+        ],
+        "answer_index": 0,
+        "explanation": "Mobile artifacts can support activity tied to a device, account, app, or extraction source. Human attribution should be supported by possession, access, account context, admissions, timing, and corroborating context.",
+        "follow_up": [
+            "What account or phone number is associated with the app?",
+            "Who had possession or access at the relevant time?",
+            "Are there admissions, witness context, or surrounding communications?"
+        ],
+        "guardrail": "A mobile artifact does not automatically identify who held the phone at that moment.",
+        "related_scenario_id": "mobile_message_actor",
+        "related_playbook_id": "mobile_device_extraction",
+        "search_terms": ["mobile", "message", "actor", "account", "possession"]
+    },
+    {
+        "id": "time_zone_guardrail",
+        "topic": "Timestamps",
+        "difficulty": "Foundational",
+        "question": "Multiple artifact timestamps do not line up exactly. What should a newer examiner consider before treating it as a contradiction?",
+        "choices": [
+            "Different sources may use different time zones, formats, precision, parser handling, or event semantics.",
+            "One of the tools must be wrong.",
+            "The suspect changed all timestamps.",
+            "Timestamps are never useful."
+        ],
+        "answer_index": 0,
+        "explanation": "Timestamps can differ because artifacts record different events, time zones, clock sources, precision, parser conversions, sync behavior, or update semantics. Document the source and meaning of each timestamp before drawing conclusions.",
+        "follow_up": [
+            "What exact artifact/source created each timestamp?",
+            "Does the tool show local time, UTC, or converted time?",
+            "What event does each timestamp actually represent?"
+        ],
+        "guardrail": "Timestamp disagreement is a prompt for source review, not an automatic contradiction or tampering conclusion.",
+        "related_scenario_id": "downloaded_file_question",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["timestamp", "time zone", "artifact", "parser"]
+    },
+    {
+        "id": "deleted_file_intent_guardrail",
+        "topic": "Windows / File Activity",
+        "difficulty": "Foundational",
+        "question": "A deleted-file artifact is found. What should be avoided without more context?",
+        "choices": [
+            "A deletion-related artifact appears in the reviewed source.",
+            "The file may require context such as path, timestamps, recycle bin records, app behavior, and user/session evidence.",
+            "The deletion proves intent to conceal.",
+            "Recovery status and source should be documented."
+        ],
+        "answer_index": 2,
+        "explanation": "Deletion artifacts can be important, but deletion alone does not prove intent. Consider application behavior, cleanup tools, user action traces, recycle bin context, file path, timing, account/session context, and corroborating evidence.",
+        "follow_up": [
+            "Was the file deleted through the Recycle Bin or another mechanism?",
+            "Are there user-action artifacts around the same time?",
+            "Could application cleanup, sync, or system behavior explain it?"
+        ],
+        "guardrail": "Deletion is not automatically concealment.",
+        "related_scenario_id": "downloaded_file_question",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["deleted", "Recycle Bin", "intent", "file activity"]
+    },
+    {
+        "id": "validated_tool_scope",
+        "topic": "Validation / Tool Confidence",
+        "difficulty": "Foundational",
+        "question": "A tool produced an artifact report. What is the strongest defensible mindset?",
+        "choices": [
+            "The report is automatically correct because the tool is popular.",
+            "The tool output should be reviewed with tool/version context, validation awareness, source data, and limitations.",
+            "No documentation is needed if the output looks normal.",
+            "The tool output replaces examiner judgment."
+        ],
+        "answer_index": 1,
+        "explanation": "Tool output should be treated as a structured aid that needs examiner review. Document tool/version, source, settings/options, limitations, and local validation or known test context when important.",
+        "follow_up": [
+            "What tool and version produced the result?",
+            "Was the relevant function validated locally or supported by known testing?",
+            "Can an important result be manually reviewed or corroborated?"
+        ],
+        "guardrail": "Tool output is not a substitute for examiner judgment, validation awareness, or source context.",
+        "related_scenario_id": "command_activity_actor",
+        "related_playbook_id": "windows_artifact_review_refresher",
+        "search_terms": ["validation", "tool", "limitations", "version"]
+    }
+]
+
+
+def search_coach_questions(query):
+    needle = (query or "").strip().lower()
+    if not needle:
+        return []
+    results = []
+    for item in COACH_QUESTIONS:
+        haystack_parts = [
+            item.get("id", ""), item.get("topic", ""), item.get("difficulty", ""),
+            item.get("question", ""), item.get("explanation", ""), item.get("guardrail", ""),
+        ]
+        haystack_parts.extend(item.get("choices", []))
+        haystack_parts.extend(item.get("follow_up", []))
+        haystack_parts.extend(item.get("search_terms", []))
+        if needle in "\n".join(str(part) for part in haystack_parts).lower():
+            results.append(item)
+    return results
 
 
 GLOSSARY = [

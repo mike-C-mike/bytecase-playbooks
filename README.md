@@ -6,11 +6,11 @@ https://byte-case.com
 
 ## Version
 
-v0.7.0
+v0.8.0
 
 ## Purpose
 
-ByteCase Playbooks is a click-based reference and learning tool for digital evidence examiners. It is designed for real-time reference during an investigation or as a refresher/training companion during downtime.
+ByteCase Playbooks is a click-based reference, refresher, and learning tool for digital evidence examiners. It is designed for real-time reference during an investigation or as a downtime learning companion for new or occasional examiners.
 
 It helps answer questions such as:
 
@@ -44,19 +44,38 @@ This release includes six built-in playbooks:
 5. Windows Artifact Review Refresher
 6. External Media Hash / Copy Refresher
 
-## v0.7.0 updates
+## v0.8.0 updates
 
-v0.7.0 adds a **Scenario Coach** layer for common interpretation questions where newer or occasional examiners need help separating technical artifacts from stronger human-action claims.
+v0.8.0 adds the first **Coach Mode** foundation.
+
+Coach Mode is a question-and-answer practice area that helps reinforce examiner thinking, attribution caution, documentation habits, and overclaim guardrails.
 
 Changes include:
 
-- Added **Scenario Coach** tab
-- Added scenario cards for command/tool activity, downloads, USB/external media, and mobile message/app actor context
-- Added scenario guidance for how to think through the issue, what supporting context may help, and what not to overclaim
-- Added related playbook shortcuts from scenario cards
-- Added related reference search shortcuts from scenario cards
-- Expanded reference search to include scenario cards
-- Preserved Playbooks as a reference/refresher tool, not a case notes or case workflow module
+- Added **Coach Mode** tab
+- Added 12 starter examiner-thinking questions
+- Added topic filtering for practice sets
+- Added answer checking with basic local score tracking
+- Added Show Answer study option
+- Added explanations, follow-up questions, and guardrails for each question
+- Added shortcuts to open related Scenario Coach cards
+- Added shortcut to search related reference terms
+- Expanded reference search to include Coach Mode questions
+- Preserved Playbooks as a non-case reference/refresher module
+
+## Coach Mode topics
+
+Starter question topics include:
+
+- Use / Access Context
+- Browser / File Activity
+- External Media
+- Memory / RAM
+- Integrity / Hashing
+- Mobile
+- Timestamps
+- Windows / File Activity
+- Validation / Tool Confidence
 
 ## Attribution / use-context mindset
 
@@ -134,6 +153,8 @@ ByteCase\
 
 Saved playbook sessions are not case notes and are not written under a case folder. They are intended to reopen the same playbook, mode, current step, reviewed steps, and step reference notes.
 
+Coach Mode practice progress is currently in-memory only and is not written to case output.
+
 ## Dependencies
 
 Runtime:
@@ -147,11 +168,11 @@ No evidence-processing, parsing, acquisition, extraction, or analysis dependency
 ## Recommended commit message
 
 ```text
-Add Playbooks scenario coach guidance
+Add Playbooks Coach Mode foundation
 ```
 
 ## Recommended commit description
 
 ```text
-Adds a Scenario Coach tab with common interpretation scenarios for command/tool activity, downloads, USB/external media, and mobile message/app actor context. Scenario cards explain how to think through the issue, what supporting context may help, what not to overclaim, and which related playbook or reference terms may help.
+Adds a Coach Mode tab with starter examiner-thinking questions, topic filtering, answer checking, explanations, follow-up prompts, guardrails, Scenario Coach shortcuts, and reference-search integration. Coach Mode reinforces attribution caution, documentation habits, and overclaim guardrails while preserving Playbooks as a non-case reference and refresher tool.
 ```
