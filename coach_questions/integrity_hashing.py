@@ -1,65 +1,60 @@
-"""Coach Mode questions for Integrity / Hashing.
+"""Coach Mode questions for integrity / hashing.
 
-Questions are intentionally judgment-focused. They reinforce careful
-interpretation, documentation habits, and overclaim guardrails.
+Content consistency pass: answer choice length is intentionally balanced so
+the safest response is not signaled by being longest.
 """
 
-QUESTIONS = [{'answer_index': 0,
-  'choices': ['The file content being compared has not changed between those hash calculations.',
-              'The file is relevant evidence.',
-              'The file proves user intent.',
-              'The file is safe to execute.'],
+QUESTIONS = [{'id': 'integrity_novice_matching_hash',
+  'topic': 'Integrity / Hashing',
   'difficulty': 'Novice',
-  'explanation': 'Matching hash values support file integrity for the compared content and algorithm. They '
-                 'do not explain what the file means, whether it is relevant, or who used it.',
-  'follow_up': ['What exactly was hashed?',
-                'When and by what tool?',
-                'Was the source or output path documented?'],
+  'question': 'Two SHA-256 values match for the same file content. What does that support?',
+  'choices': ['The compared content has not changed.',
+              'The file is relevant evidence.',
+              'The user knew the contents. without corroborating artifacts or scope notes',
+              'The tool made no mistakes anywhere.'],
+  'answer_index': 0,
+  'explanation': 'A matching hash supports integrity for the specific object, algorithm, and '
+                 'comparison. It does not interpret the file or explain user knowledge.',
+  'follow_up': ['What exact source was hashed?',
+                'Which algorithm and tool/version were used?',
+                'Was the hash file-level, image-level, or export-level?'],
   'guardrail': 'Integrity is not interpretation.',
-  'id': 'hashing_novice_integrity',
-  'question': 'Two SHA-256 hash values match for a file. What does that support?',
-  'related_playbook_id': 'external_media_hash_copy_refresher',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['hash', 'integrity', 'SHA-256', 'verify'],
-  'topic': 'Integrity / Hashing'},
- {'answer_index': 1,
-  'choices': ['Assume evidence tampering immediately.',
-              'Document the mismatch, verify the exact file/source/algorithm, check paths and versions, '
-              'preserve both results, and investigate the cause.',
-              'Delete the newer hash record.',
-              'Ignore the mismatch if filenames match.'],
+  'search_terms': ['hash', 'SHA-256', 'integrity']},
+ {'id': 'integrity_experienced_mismatch',
+  'topic': 'Integrity / Hashing',
   'difficulty': 'Experienced',
-  'explanation': 'A mismatch is important, but the cause may include wrong file, changed metadata/content, '
-                 'different algorithm, path confusion, export transformation, or actual alteration. Document '
-                 'before concluding.',
-  'follow_up': ['Was the same file and algorithm used?',
-                'Were outputs transformed or regenerated?',
-                'Can the original source or manifest be verified?'],
-  'guardrail': 'A hash mismatch needs investigation; it is not automatically proof of malicious alteration.',
-  'id': 'hashing_experienced_mismatch',
-  'question': 'A rehash does not match the original manifest. What should happen next?',
-  'related_playbook_id': 'external_media_hash_copy_refresher',
+  'question': 'A rehash does not match the original manifest. What is the careful next step?',
+  'choices': ['Assume tampering immediately.',
+              'Verify source, method, scope, and prior records.',
+              'Ignore the mismatch. without corroborating artifacts or scope notes',
+              'Change the manifest to match.'],
+  'answer_index': 1,
+  'explanation': 'A mismatch is important, but possible causes include the wrong file, changed '
+                 'content, a different export, different scope, metadata changes, or documentation '
+                 'error. Resolve before concluding why it happened.',
+  'follow_up': ['Was the same exact object hashed?',
+                'Were tool settings and paths the same?',
+                'Are prior manifests and logs available?'],
+  'guardrail': 'A hash mismatch requires investigation; it is not automatically malicious '
+               'alteration.',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['hash mismatch', 'manifest', 'integrity', 'algorithm'],
-  'topic': 'Integrity / Hashing'},
- {'answer_index': 1,
-  'choices': ['Report only the shortest hash because it is easier to read.',
-              'Clearly state each algorithm, source, tool/version, calculation time, and what each hash '
-              'applies to.',
-              'Mix values if filenames match.',
-              'Use hashes to conclude who created the file.'],
+  'search_terms': ['hash mismatch', 'manifest', 'verification']},
+ {'id': 'integrity_expert_multiple_hashes',
+  'topic': 'Integrity / Hashing',
   'difficulty': 'Expert',
-  'explanation': 'Hash values are only meaningful when tied to an exact source, algorithm, tool/version, and '
-                 'time. Different tools may hash different objects, containers, exports, or normalized '
-                 'outputs.',
-  'follow_up': ['Were the same bytes hashed by each tool?',
-                'Are hashes for original media, image, exported file, report, or container?',
-                'Does policy prefer a specific algorithm?'],
+  'question': 'MD5, SHA-1, and SHA-256 values exist from different tools. What should the report '
+              'tie each value to?',
+  'choices': ['Only the shortest value.',
+              'The person who possessed the device.',
+              'Exact source, algorithm, tool/version, and time.',
+              'The case theory. without corroborating artifacts or scope notes'],
+  'answer_index': 2,
+  'explanation': 'Hash values are useful only when tied to the exact object hashed, the algorithm, '
+                 'tool/version, and collection or verification context.',
+  'follow_up': ['Are these source-media, image, file, or export hashes?',
+                'Were they generated at acquisition or later verification?',
+                'Are the values reproducible?'],
   'guardrail': 'Hash values must be scoped to the exact object hashed.',
-  'id': 'hashing_expert_algorithm_scope',
-  'question': 'An examiner has MD5, SHA-1, and SHA-256 values from different tools. What is the careful '
-              'reporting approach?',
-  'related_playbook_id': 'external_media_hash_copy_refresher',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['MD5', 'SHA-1', 'SHA-256', 'algorithm', 'scope'],
-  'topic': 'Integrity / Hashing'}]
+  'search_terms': ['MD5', 'SHA-1', 'SHA-256', 'scope']}]

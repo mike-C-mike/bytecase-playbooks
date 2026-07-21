@@ -1,64 +1,61 @@
-"""Coach Mode questions for Windows / File Activity.
+"""Coach Mode questions for windows / file / activity.
 
-Questions are intentionally judgment-focused. They reinforce careful
-interpretation, documentation habits, and overclaim guardrails.
+Content consistency pass: answer choice length is intentionally balanced so
+the safest response is not signaled by being longest.
 """
 
-QUESTIONS = [{'answer_index': 0,
-  'choices': ['The program appears in an artifact commonly associated with execution or application '
-              'activity, depending on the source.',
-              'The suspect definitely ran the program.',
-              'The program was malicious.',
-              'The program was installed by the user.'],
+QUESTIONS = [{'id': 'windows_novice_execution_artifact',
+  'topic': 'Windows / File Activity',
   'difficulty': 'Novice',
-  'explanation': 'Program-execution artifacts can support application activity, but interpretation depends '
-                 'on artifact type, source, timestamp meaning, account/session context, and corroboration.',
-  'follow_up': ['Which artifact source is it?',
-                'What timestamp does that source record?',
-                'Is there user/session or file-path context?'],
+  'question': 'A program-execution artifact is present. What is the safest starting '
+              'interpretation?',
+  'choices': ['The program activity may be supported by that artifact.',
+              'The named person ran the program.',
+              'The program was malicious.',
+              'Intent is established. without corroborating artifacts or scope notes'],
+  'answer_index': 0,
+  'explanation': 'Program-execution artifacts can support application activity, but interpretation '
+                 'depends on the artifact family, source meaning, OS version, and corroboration.',
+  'follow_up': ['Which artifact family is it?',
+                'Does it show execution, inventory, or user interaction?',
+                'Are session/account artifacts aligned?'],
   'guardrail': 'Execution indicators do not automatically identify the human actor or intent.',
-  'id': 'windows_novice_program_execution',
-  'question': 'A program-execution artifact is present. What is the safest starting interpretation?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
-  'related_scenario_id': 'command_activity_actor',
-  'search_terms': ['program execution', 'prefetch', 'shimcache', 'amcache', 'userassist'],
-  'topic': 'Windows / File Activity'},
- {'answer_index': 2,
-  'choices': ['Documenting the deletion-related artifact and source.',
-              'Considering Recycle Bin, filesystem, application, and timeline context.',
-              'Claiming the user intentionally deleted it to hide evidence.',
-              'Looking for corroborating activity.'],
+  'related_scenario_id': 'command_seen_on_device',
+  'search_terms': ['Prefetch', 'Amcache', 'execution']},
+ {'id': 'windows_experienced_deleted_file',
+  'topic': 'Windows / File Activity',
   'difficulty': 'Experienced',
-  'explanation': 'Deletion artifacts may support that a file was deleted or no longer exists in a location. '
-                 'Intent to conceal requires additional context and should not be assumed.',
-  'follow_up': ['Was it deleted by user action, app behavior, cleanup, sync, or system process?',
-                'Are there Recycle Bin records or logs?',
-                'Does surrounding activity support intent?'],
-  'guardrail': 'Deletion is not automatically concealment.',
-  'id': 'windows_experienced_deleted_file',
   'question': 'A deleted-file artifact is found. What should be avoided without more support?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
+  'choices': ['Documenting source and path.',
+              'Reviewing recycle context.',
+              'Calling it intentional concealment.',
+              'Checking timestamps. without corroborating artifacts or scope notes'],
+  'answer_index': 2,
+  'explanation': 'Deletion artifacts may support that a file was deleted, moved to recycle, or no '
+                 'longer exists in a location. Motive and intent require additional context.',
+  'follow_up': ['Was it deleted, recycled, moved, or overwritten?',
+                'What account/session context exists?',
+                'Are there related searches, messages, or tool activity?'],
+  'guardrail': 'Deletion is not automatically concealment.',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['deleted file', 'Recycle Bin', 'intent', 'cleanup'],
-  'topic': 'Windows / File Activity'},
- {'answer_index': 2,
-  'choices': ['The execution did not happen because one artifact is missing.',
-              'The execution definitely happened because one artifact is present.',
-              'Evaluate artifact creation conditions, OS/app behavior, parser limits, cleanup, timing, and '
-              'corroboration before stating strength.',
-              'Ignore absence entirely.'],
+  'search_terms': ['deleted file', 'recycle bin', 'intent']},
+ {'id': 'windows_expert_absence_conflict',
+  'topic': 'Windows / File Activity',
   'difficulty': 'Expert',
-  'explanation': 'Artifact presence and absence both require context. Some artifacts are not created under '
-                 'every condition, can be cleared, can be disabled, or may not apply to that '
-                 'OS/version/application behavior.',
-  'follow_up': ['Should the missing artifact have been created under these conditions?',
-                'Is the tool parsing the right OS version and source?',
-                'Are there alternative supporting or refuting artifacts?'],
-  'guardrail': 'Absence of an expected artifact is not automatically proof that activity did not occur.',
-  'id': 'windows_expert_artifact_disagreement',
-  'question': 'One Windows artifact suggests execution, while another expected artifact is absent. What is '
-              'the best expert response?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
-  'related_scenario_id': 'command_activity_actor',
-  'search_terms': ['artifact absence', 'program execution', 'parser limits', 'corroboration'],
-  'topic': 'Windows / File Activity'}]
+  'question': 'One artifact suggests execution, while an expected artifact is absent. What is the '
+              'careful approach?',
+  'choices': ['Execution did not happen.',
+              'The present artifact wins.',
+              'Evaluate artifact creation rules and limitations.',
+              'Pick the simpler story. without corroborating artifacts or scope notes'],
+  'answer_index': 2,
+  'explanation': 'Artifact presence and absence both require context. Some artifacts are not '
+                 'created under all OS versions, configurations, execution paths, or retention '
+                 'conditions.',
+  'follow_up': ['Should the expected artifact exist on this system?',
+                'Could cleaning, rollover, policy, or configuration explain absence?',
+                'Do other sources support or weaken execution?'],
+  'guardrail': 'Absence of an expected artifact is not automatically proof that activity did not '
+               'occur.',
+  'related_scenario_id': 'command_seen_on_device',
+  'search_terms': ['artifact absence', 'execution', 'Prefetch']}]

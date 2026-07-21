@@ -2379,3 +2379,4 @@ class PlaybooksApp:
         widget.insert("1.0", text or "")
         if readonly:
             widget.configure(state="disabled")
+

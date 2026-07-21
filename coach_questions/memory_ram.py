@@ -1,67 +1,62 @@
-"""Coach Mode questions for Memory / RAM.
+"""Coach Mode questions for memory / ram.
 
-Questions are intentionally judgment-focused. They reinforce careful
-interpretation, documentation habits, and overclaim guardrails.
+Content consistency pass: answer choice length is intentionally balanced so
+the safest response is not signaled by being longest.
 """
 
-QUESTIONS = [{'answer_index': 1,
-  'choices': ['Conclude malware immediately.',
-              'Treat it as a lead and review path, parent process, command line, network connections, '
-              'modules, and corroboration.',
-              'Delete it from the evidence.',
-              'Ignore memory process data.'],
+QUESTIONS = [{'id': 'memory_novice_process_name',
+  'topic': 'Memory / RAM',
   'difficulty': 'Novice',
-  'explanation': 'A process name can be misleading. Process path, parent/child relationship, command line, '
-                 'network activity, DLLs/modules, hashes, and supporting artifacts help determine whether it '
-                 'is meaningful.',
-  'follow_up': ['What is the full process path?',
-                'What launched it?',
-                'Is there network or injected-code context?'],
+  'question': 'A process name in memory looks suspicious. What is the best first mindset?',
+  'choices': ['Call it malware immediately.',
+              'Treat it as a lead needing context.',
+              'Ignore it because RAM changes.',
+              'Attribute it to the user. without corroborating artifacts or scope notes'],
+  'answer_index': 1,
+  'explanation': 'A process name can be misleading. Review path, parent/child process, command '
+                 'line, modules, handles, and related disk/log artifacts before stronger claims.',
+  'follow_up': ['What is the process path and parent process?',
+                'Are command-line arguments available?',
+                'Do disk artifacts support the same activity?'],
   'guardrail': 'A process name alone is not a malware finding.',
-  'id': 'memory_novice_process_name',
-  'question': 'A process name in memory looks suspicious. What should you do first?',
-  'related_playbook_id': 'memory_ram_analysis_volatility',
-  'related_scenario_id': 'command_activity_actor',
-  'search_terms': ['process', 'RAM', 'Volatility', 'pslist', 'pstree'],
-  'topic': 'Memory / RAM'},
- {'answer_index': 1,
-  'choices': ['The machine is confirmed compromised.',
-              'The plugin output is a lead requiring process context, validation awareness, possible dumped '
-              'content review, and corroboration.',
-              'The user intentionally installed malware.',
-              'No other artifacts matter.'],
+  'related_scenario_id': 'command_seen_on_device',
+  'search_terms': ['memory', 'process', 'malware', 'Volatility']},
+ {'id': 'memory_experienced_malfind',
+  'topic': 'Memory / RAM',
   'difficulty': 'Experienced',
-  'explanation': 'Suspicious memory output should be evaluated with process tree, path, modules, network '
-                 'connections, tool documentation, dumps when justified, and other artifacts. It can guide '
-                 'analysis but should not be overclaimed.',
-  'follow_up': ['Which process/PID is involved?',
-                'Can the output be corroborated with disk or network artifacts?',
-                'Is specialized malware analysis needed?'],
-  'guardrail': 'Suspicious memory output is not automatic proof of compromise, intent, or actor identity.',
-  'id': 'memory_experienced_malfind',
-  'question': 'A memory plugin flags possible injected code. What is the best next mindset?',
-  'related_playbook_id': 'memory_ram_analysis_volatility',
-  'related_scenario_id': 'command_activity_actor',
-  'search_terms': ['malfind', 'injection', 'memory', 'malware'],
-  'topic': 'Memory / RAM'},
- {'answer_index': 1,
-  'choices': ['Ignore them if the capture succeeded.',
-              'Document tool/version, timing, examiner actions, system changes, possible volatility loss, '
-              'and any errors or environmental constraints.',
-              'State the memory image is a perfect snapshot of original state.',
-              'Avoid hashing the output because memory changes.'],
+  'question': 'A memory plugin flags possible injected code. What is the best next response?',
+  'choices': ['The system is confirmed compromised.',
+              'Correlate plugin output with process and source context.',
+              'Delete the process from the notes.',
+              'Skip tool/version documentation. without corroborating artifacts or scope notes'],
+  'answer_index': 1,
+  'explanation': 'Suspicious plugin output should be evaluated with process tree, path, modules, '
+                 'network details, hashes, source context, tool version, and possible false '
+                 'positives.',
+  'follow_up': ['What did the plugin actually detect?',
+                'Can the region be dumped and reviewed?',
+                'Do other sources support the same conclusion?'],
+  'guardrail': 'Suspicious memory output is not automatic proof of compromise, intent, or actor '
+               'identity.',
+  'related_scenario_id': 'command_seen_on_device',
+  'search_terms': ['malfind', 'injection', 'memory plugin']},
+ {'id': 'memory_expert_live_limitations',
+  'topic': 'Memory / RAM',
   'difficulty': 'Expert',
-  'explanation': 'Live collection changes the system, and memory is constantly changing. Documentation '
-                 'should explain what was captured, when, with what tool, and what actions/limitations may '
-                 'affect interpretation.',
-  'follow_up': ['What actions occurred before capture?',
-                'What tool/version and destination were used?',
-                'Were hashes, logs, or errors recorded?'],
-  'guardrail': 'A successful live capture is not a perfect record of every prior volatile condition.',
-  'id': 'memory_expert_live_capture_limitations',
-  'question': 'A RAM capture was performed on a live system after several minutes of interaction. How should '
+  'question': 'A RAM capture was made after several minutes of live interaction. How should '
               'limitations be handled?',
-  'related_playbook_id': 'live_computer_acquisition_ram',
-  'related_scenario_id': 'command_activity_actor',
-  'search_terms': ['RAM capture', 'volatile data', 'limitations', 'live acquisition'],
-  'topic': 'Memory / RAM'}]
+  'choices': ['Omit timing because capture succeeded.',
+              'Document actions, elapsed time, tools, and limits.',
+              'Describe it as perfect live state.',
+              'Assume no volatile data changed. without corroborating artifacts or scope notes'],
+  'answer_index': 1,
+  'explanation': 'Live collection changes the system, and memory is constantly changing. Document '
+                 'timing, interactions, tool behavior, errors, and limitations so later '
+                 'interpretation is properly bounded.',
+  'follow_up': ['What actions occurred before capture?',
+                'Was the system isolated or still networked?',
+                'Were tool errors or warnings recorded?'],
+  'guardrail': 'A successful live capture is not a perfect record of every prior volatile '
+               'condition.',
+  'related_scenario_id': 'command_seen_on_device',
+  'search_terms': ['RAM capture', 'live response', 'limitations']}]

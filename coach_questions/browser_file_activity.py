@@ -1,69 +1,62 @@
-"""Coach Mode questions for Browser / File Activity.
+"""Coach Mode questions for browser / file / activity.
 
-Questions are intentionally judgment-focused. They reinforce careful
-interpretation, documentation habits, and overclaim guardrails.
+Content consistency pass: answer choice length is intentionally balanced so
+the safest response is not signaled by being longest.
 """
 
-QUESTIONS = [{'answer_index': 2,
-  'choices': ['The browser/process appears to have downloaded the file.',
-              'The file path and timestamp should be documented.',
-              'A specific person definitely opened, viewed, and understood the file.',
-              'Related file-open artifacts may be worth checking.'],
+QUESTIONS = [{'id': 'browser_file_novice_download',
+  'topic': 'Browser / File Activity',
   'difficulty': 'Novice',
-  'explanation': 'A download artifact can support that a download occurred, but viewing, knowledge, intent, '
-                 'and actor identity need additional support such as file-open records, application history, '
-                 'thumbnails, communications, admissions, or possession context.',
-  'follow_up': ['Are there LNK, Jump List, recent-file, thumbnail, or app history artifacts?',
-                'Was the file automatically downloaded or synced?',
-                'Does user/session context line up with the timestamp?'],
+  'question': 'A browser record shows a file download. What should the examiner avoid saying from '
+              'that record alone?',
+  'choices': ['The file was downloaded by that browser/profile.',
+              'The download source should be documented.',
+              'Someone definitely read the file contents.',
+              'File-open artifacts may be checked next.'],
+  'answer_index': 2,
+  'explanation': 'A download record can support a download event, but it does not by itself '
+                 'establish viewing, knowledge, intent, or the human actor.',
+  'follow_up': ['Is the downloaded file still present?',
+                'Are there LNK, Jump List, MRU, or application-open records?',
+                'What profile, account, and timestamp context exists?'],
   'guardrail': 'Downloaded is not the same as opened, viewed, understood, or personally selected.',
-  'id': 'browser_file_novice_download',
-  'question': 'A browser record shows a file was downloaded. What should the examiner avoid saying without '
-              'more support?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['download', 'browser', 'file access', 'viewed', 'knowledge'],
-  'topic': 'Browser / File Activity'},
- {'answer_index': 0,
-  'choices': ['The file may have been accessed or presented to the user/application context reflected by '
-              'those artifacts.',
-              'The user fully read and understood the file.',
-              'The file was created by the suspect.',
-              'The file is contraband because it appears in recent files.'],
+  'search_terms': ['download', 'browser', 'knowledge', 'file access']},
+ {'id': 'browser_file_experienced_file_open',
+  'topic': 'Browser / File Activity',
   'difficulty': 'Experienced',
-  'explanation': 'Recent-file and shortcut artifacts may support interaction or application/user context, '
-                 'but the strength depends on the artifact source, timestamp meaning, path, user profile, '
-                 'and corroborating records.',
-  'follow_up': ['Which artifact created the record and what timestamp does it represent?',
-                'Does the path point to local, removable, network, or cloud storage?',
-                'Are there app logs, thumbnails, or content artifacts that support interaction?'],
-  'guardrail': 'File-access indicators need source-specific timestamp interpretation and do not '
-               'automatically prove knowledge or intent.',
-  'id': 'browser_file_experienced_file_open',
-  'question': 'A file appears in recent-file and shortcut artifacts. What is a careful interpretation?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
+  'question': 'A file appears in recent-file and shortcut artifacts. What is a careful '
+              'interpretation?',
+  'choices': ['The artifact may support access or presentation context.',
+              'The person fully read the file. without corroborating artifacts or scope notes',
+              'The file was created by that user.',
+              'The file meaning is already known.'],
+  'answer_index': 0,
+  'explanation': 'Recent-file and shortcut artifacts can support interaction or application '
+                 'context, but the source and artifact family determine exactly what can be said.',
+  'follow_up': ['Which profile produced the artifact?',
+                'Does the source file still exist?',
+                'Are timestamps consistent across sources?'],
+  'guardrail': 'File-access indicators require source-specific meaning and attribution context.',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['recent files', 'LNK', 'Jump List', 'opened', 'artifact'],
-  'topic': 'Browser / File Activity'},
- {'answer_index': 1,
-  'choices': ['Cache or sync presence always proves the user intentionally saved the file.',
-              'The file location, source mechanism, sync/cache behavior, timestamps, and user interaction '
-              'artifacts should be evaluated before stronger claims.',
-              'Cloud sync folders should be ignored.',
-              'Browser cache always proves manual viewing.'],
+  'search_terms': ['recent files', 'LNK', 'jump list', 'viewed']},
+ {'id': 'browser_file_expert_cloud_sync_cache',
+  'topic': 'Browser / File Activity',
   'difficulty': 'Expert',
-  'explanation': 'Cache and sync artifacts can be generated by automatic processes, previews, redirects, '
-                 'sync clients, or background application behavior. Stronger knowledge or actor claims need '
-                 'corroborating interaction artifacts and context.',
-  'follow_up': ['Was the file manually downloaded, cached, synced, previewed, or generated automatically?',
-                'Are there access/open/viewing artifacts outside the cache or sync folder?',
-                'Does the user profile and device usage support human interaction at the relevant time?'],
-  'guardrail': 'File presence from cache/sync mechanisms does not automatically prove intentional '
-               'possession, viewing, or knowledge.',
-  'id': 'browser_file_expert_cloud_sync_cache',
-  'question': 'A file exists in a browser cache or cloud-sync folder. What should the examiner consider '
-              'before describing user knowledge?',
-  'related_playbook_id': 'windows_artifact_review_refresher',
+  'question': 'A file exists in cache or a cloud-sync folder. What should be evaluated before '
+              'discussing user knowledge?',
+  'choices': ['Only whether the filename is suspicious.',
+              'Source mechanism, sync state, and interaction artifacts.',
+              'Assume manual saving by the user. without corroborating artifacts or scope notes',
+              'Ignore cached and synced data entirely.'],
+  'answer_index': 1,
+  'explanation': 'Cache and sync mechanisms can create local files through automatic processes, '
+                 'previews, redirects, cloud activity, or activity from another device. User '
+                 'knowledge requires more context.',
+  'follow_up': ['Was the file hydrated, opened, previewed, or synced?',
+                'Is there a cloud account or provider record?',
+                'Are there local open artifacts after the sync/cache event?'],
+  'guardrail': 'Local file presence from cache or sync does not automatically prove intentional '
+               'viewing or knowledge.',
   'related_scenario_id': 'downloaded_file_question',
-  'search_terms': ['cache', 'cloud sync', 'browser', 'knowledge', 'automatic'],
-  'topic': 'Browser / File Activity'}]
+  'search_terms': ['cache', 'cloud sync', 'OneDrive', 'knowledge']}]
